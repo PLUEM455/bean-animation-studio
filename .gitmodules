@@ -1,0 +1,12 @@
+[submodule "vendor/claude-code-plugin"]
+	path = vendor/claude-code-plugin
+	url = https://github.com/remotion-dev/claude-code-plugin.git
+	shallow = true
+[submodule "vendor/skills"]
+	path = vendor/skills
+	url = https://github.com/remotion-dev/skills.git
+	shallow = true
+[submodule "vendor/remotion"]
+	path = vendor/remotion
+	url = https://github.com/remotion-dev/remotion.git
+	shallow = true
