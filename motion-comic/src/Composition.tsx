@@ -5,6 +5,7 @@ type Panel = {
   pan: [number, number]; // direction of camera drift, -1..1 (x right, y down)
   shake?: boolean;
   sub?: string;
+  layers?: { src: string; depth: number; bob?: number }[];
 };
 const IMG_W = 736;
 const W = 1080;
@@ -13,7 +14,12 @@ export const PANEL_FRAMES = 60;
 
 export const PANELS: Panel[] = [
   { img: "p1.jpg", x: 320, y: 0, w: 416, h: 270, pan: [0, 1], sub: "อากาศ... กำลังถูกดึงเข้าหาเขา..." },
-  { img: "p1.jpg", x: 0, y: 280, w: 736, h: 290, pan: [1, 0], shake: true, sub: "[เสียงสะเทือนกึกก้อง]" },
+  { img: "p1.jpg", x: 0, y: 280, w: 736, h: 290, pan: [1, 0], shake: true, sub: "[เสียงสะเทือนกึกก้อง]",
+    layers: [
+      { src: "p1_bg.png", depth: 0.4 },
+      { src: "p1_koku.png", depth: 0.8, bob: 3 },
+      { src: "p1_gyomei.png", depth: 1.2, bob: 6 },
+    ] },
   { img: "p1.jpg", x: 0, y: 600, w: 736, h: 230, pan: [1, 0], shake: true },
   { img: "p1.jpg", x: 0, y: 860, w: 736, h: 213, pan: [1, -1], shake: true },
   { img: "p2.jpg", x: 0, y: 0, w: 736, h: 640, pan: [1, -1] },
@@ -57,10 +63,27 @@ const PanelView: React.FC<{ p: Panel }> = ({ p }) => {
           transform: `translate(${drift * p.pan[0] + sx}px, ${drift * p.pan[1] + sy}px) scale(${zoom})`,
         }}
       >
-        <Img
-          src={staticFile(p.img)}
-          style={{ position: "absolute", width: IMG_W * s, left: -p.x * s, top: -p.y * s }}
-        />
+        {p.layers ? (
+          p.layers.map((l) => (
+            <Img
+              key={l.src}
+              src={staticFile(l.src)}
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: fw,
+                height: fh,
+                transform: `translate(${drift * p.pan[0] * l.depth}px, ${(l.bob ?? 0) * Math.sin(frame * 0.5) * s}px) scale(${1 + 0.05 * l.depth})`,
+              }}
+            />
+          ))
+        ) : (
+          <Img
+            src={staticFile(p.img)}
+            style={{ position: "absolute", width: IMG_W * s, left: -p.x * s, top: -p.y * s }}
+          />
+        )}
       </div>
       {p.sub ? (
         <div
