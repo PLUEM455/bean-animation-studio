@@ -1,0 +1,91 @@
+{
+  "format_version": "1.10.0",
+  "animation_controllers": {
+    "controller.animation.jjk_toji.combat": {
+      "initial_state": "default",
+      "states": {
+        "default": {
+          "transitions": [
+            {
+              "ready": "query.property('jjk:weapon') > 0"
+            }
+          ],
+          "blend_transition": 0.1
+        },
+        "ready": {
+          "animations": [
+            "raise"
+          ],
+          "blend_transition": 0.15,
+          "transitions": [
+            {
+              "default": "query.property('jjk:weapon') == 0"
+            },
+            {
+              "windup": "query.property('jjk:action') == 1"
+            },
+            {
+              "strike": "query.property('jjk:action') == 2"
+            }
+          ]
+        },
+        "windup": {
+          "animations": [
+            {
+              "windup_1": "query.property('jjk:weapon') == 1"
+            },
+            {
+              "windup_2": "query.property('jjk:weapon') == 2"
+            },
+            {
+              "windup_3": "query.property('jjk:weapon') == 3"
+            },
+            {
+              "windup_4": "query.property('jjk:weapon') == 4"
+            },
+            {
+              "windup_5": "query.property('jjk:weapon') == 5"
+            }
+          ],
+          "blend_transition": 0.1,
+          "transitions": [
+            {
+              "strike": "query.property('jjk:action') == 2"
+            },
+            {
+              "ready": "query.property('jjk:action') == 0"
+            }
+          ]
+        },
+        "strike": {
+          "animations": [
+            {
+              "strike_1": "query.property('jjk:weapon') == 1"
+            },
+            {
+              "strike_2": "query.property('jjk:weapon') == 2"
+            },
+            {
+              "strike_3": "query.property('jjk:weapon') == 3"
+            },
+            {
+              "strike_4": "query.property('jjk:weapon') == 4"
+            },
+            {
+              "strike_5": "query.property('jjk:weapon') == 5"
+            }
+          ],
+          "blend_transition": 0.05,
+          "transitions": [
+            {
+              "ready": "query.property('jjk:action') == 0"
+            },
+            {
+              "windup": "query.property('jjk:action') == 1"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -65,6 +65,8 @@ PALETTE = {  # ชื่อ -> สี (วางเป็นพิกเซล�
     "chain": (150, 150, 160), "grip": (40, 40, 45), "purple": (130, 60, 170),
     "purple_d": (90, 35, 125), "eyeY": (230, 230, 80), "gold": (200, 170, 60),
     "band": (110, 110, 120),
+    "tsuka": (22, 22, 28), "tsuka2": (58, 58, 70), "bladeE": (250, 252, 255), "bladeM": (165, 172, 186),
+    "etch": (95, 102, 118), "tassel": (228, 228, 234), "tassel_d": (150, 150, 162), "white": (238, 238, 244),
 }
 PIDX = {n: i for i, n in enumerate(PALETTE)}
 
@@ -132,10 +134,13 @@ def paint_entity_texture():
 
 
 # ---------------- โมเดล ----------------
-def cube(origin, size, color):
-    p = [32 + PIDX[color], 0]
-    face = {"uv": p, "uv_size": [1, 1]}
-    return {"origin": origin, "size": size, "uv": {k: face for k in ("north", "south", "east", "west", "up", "down")}}
+def cube(origin, size, color, bx=32, rot=None, pivot=None):
+    face = {"uv": [bx + PIDX[color], 0], "uv_size": [1, 1]}
+    c = {"origin": [round(v, 3) for v in origin], "size": [round(v, 3) for v in size],
+         "uv": {k: face for k in ("north", "south", "east", "west", "up", "down")}}
+    if rot:
+        c["rotation"] = rot; c["pivot"] = [round(v, 3) for v in pivot]
+    return c
 
 
 def box(origin, size, uv):
@@ -163,34 +168,15 @@ def geo():
             cube([-7, 11, -5.8], [4, 4, 4], "purple_d"), cube([-7.3, 12.8, -6], [1, 1, 0.4], "eyeY"),
             cube([-5.3, 12.8, -6], [1, 1, 0.4], "eyeY"),
         ]},
-        # อาวุธ (ติดแขนขวา โชว์ตามค่า jjk:weapon)
-        {"name": "sword", "parent": "rightArm", "pivot": [HX, HY, HZ], "cubes": [
-            cube([HX - 0.6, HY, HZ - 0.6], [1.2, 3, 1.2], "grip"),
-            cube([HX - 2, HY + 3, HZ - 0.8], [4, 0.8, 1.6], "gold"),
-            cube([HX - 0.5, HY + 3.8, HZ - 0.3], [1, 19, 0.6], "blade"),
-        ]},
-        {"name": "spear", "parent": "rightArm", "pivot": [HX, HY, HZ], "cubes": [
-            cube([HX - 0.5, HY - 6, HZ - 0.5], [1, 30, 1], "red_d"),
-            cube([HX - 1, HY + 24, HZ - 0.3], [2, 6, 0.6], "steel"),
-            cube([HX - 2, HY + 23, HZ - 0.3], [4, 1, 0.6], "steel_d"),
-        ]},
-        {"name": "pistol", "parent": "rightArm", "pivot": [HX, HY, HZ], "cubes": [
-            cube([HX - 0.8, HY - 1, HZ - 0.8], [1.6, 4, 1.6], "grip"),
-            cube([HX - 0.8, HY + 3, HZ - 6], [1.6, 2, 7], "steel_d"),
-            cube([HX - 0.5, HY + 5, HZ - 5.5], [1, 0.5, 5], "steel"),
-        ]},
-        {"name": "yuun", "parent": "rightArm", "pivot": [HX, HY, HZ], "cubes": [
-            cube([HX - 0.6, HY - 3, HZ - 0.6], [1.2, 8, 1.2], "green"),
-            cube([HX - 0.2, HY + 5, HZ - 0.2], [0.4, 1.5, 0.4], "chain"),
-            cube([HX - 0.6, HY + 6.5, HZ - 0.6], [1.2, 8, 1.2], "grip"),
-            cube([HX - 0.2, HY + 14.5, HZ - 0.2], [0.4, 1.5, 0.4], "chain"),
-            cube([HX - 0.6, HY + 16, HZ - 0.6], [1.2, 8, 1.2], "green"),
-        ]},
-        {"name": "chain_spear", "parent": "rightArm", "pivot": [HX, HY, HZ], "cubes": [
-            cube([HX - 0.5, HY - 6, HZ - 0.5], [1, 30, 1], "red_d"),
-            cube([HX - 1, HY + 24, HZ - 0.3], [2, 6, 0.6], "steel"),
-        ] + [cube([HX - 0.4 + (0.6 if i % 2 else -0.2), HY - 6 - 1.2 * i - 1, HZ - 0.4], [0.8, 1, 0.8], "chain") for i in range(9)]},
     ]
+    for key, (prefix, fn) in WBUILD.items():
+        bs = fn(prefix, 32)
+        for bn in bs:
+            shift_bone(bn, HX, HY, HZ)
+        bs[0]["parent"] = "rightArm"
+        bones += bs
+    if False:
+        pass
     return {
         "format_version": "1.12.0",
         "minecraft:geometry": [{
@@ -256,6 +242,7 @@ def build_items():
                 },
             },
         })
+    tex.update(build_spawn_egg())
     wj("RP/textures/item_texture.json", {"resource_pack_name": "jjk", "texture_name": "atlas.items", "texture_data": tex})
     wj("BP/loot_tables/entities/toji.json", {"pools": [{"rolls": 1, "entries": (
         [{"type": "item", "name": f"jjk:{w}", "weight": 1} for w in WEAPONS] + [{"type": "empty", "weight": 5}])}]})
@@ -268,7 +255,8 @@ def build_entity():
         "minecraft:entity": {
             "description": {
                 "identifier": "jjk:toji", "is_spawnable": True, "is_summonable": True,
-                "properties": {"jjk:weapon": {"type": "int", "range": [0, 5], "default": 0, "client_sync": True}},
+                "properties": {"jjk:weapon": {"type": "int", "range": [0, 5], "default": 0, "client_sync": True},
+                               "jjk:action": {"type": "int", "range": [0, 2], "default": 0, "client_sync": True}},
             },
             "components": {
                 "minecraft:type_family": {"family": ["toji", "monster"]},
@@ -317,13 +305,14 @@ def build_entity():
             "materials": {"default": "entity_alphatest"},
             "textures": {"default": "textures/entity/toji"},
             "geometry": {"default": "geometry.jjk_toji"},
-            "animations": {"walk": "animation.jjk_toji.walk", "raise": "animation.jjk_toji.raise"},
-            "scripts": {"animate": ["walk", {"raise": "query.property('jjk:weapon') > 0"}]},
+            "animations": dict([("walk", "animation.jjk_toji.walk"), ("raise", "animation.jjk_toji.raise"),
+                                ("combat", "controller.animation.jjk_toji.combat")]
+                               + [(f"{k}_{i}", f"animation.jjk_toji.{k}_{i}") for k in ("windup", "strike") for i in range(1, 6)]),
+            "scripts": {"animate": ["walk", "combat"]},
             "render_controllers": ["controller.render.jjk_toji"],
-            "spawn_egg": {"base_color": "#1c1c22", "overlay_color": "#7a3cad"},
         }},
     })
-    names = ["sword", "spear", "pistol", "yuun", "chain_spear"]
+    names = ["sword*", "spear*", "pistol*", "yuun*", "chainsp*"]
     wj("RP/render_controllers/toji.render_controllers.json", {
         "format_version": "1.8.0",
         "render_controllers": {"controller.render.jjk_toji": {
@@ -331,20 +320,11 @@ def build_entity():
             "part_visibility": [{"*": True}] + [{n: f"query.property('jjk:weapon') == {i + 1}"} for i, n in enumerate(names)],
         }},
     })
-    swing = lambda sign: [f"math.cos(query.modified_distance_moved * 38.17) * {sign * 35}", 0, 0]
-    wj("RP/animations/toji.animation.json", {
-        "format_version": "1.8.0",
-        "animations": {
-            "animation.jjk_toji.walk": {"loop": True, "bones": {
-                "leftArm": {"rotation": swing(-1)}, "rightArm": {"rotation": swing(1)},
-                "leftLeg": {"rotation": swing(1)}, "rightLeg": {"rotation": swing(-1)}}},
-            "animation.jjk_toji.raise": {"loop": True, "bones": {"rightArm": {"rotation": [-70, 0, 0]}}},
-        },
-    })
+    build_toji_animations()
 
 
 def build_lang_and_misc():
-    lines = ["entity.jjk:toji.name=โทจิ", "item.spawn_egg.entity.jjk:toji.name=ไข่เกิด โทจิ"]
+    lines = ["entity.jjk:toji.name=โทจิ", "item.spawn_egg.entity.jjk:toji.name=ไข่เกิด โทจิ", "item.jjk:toji_spawn_egg=ไข่เกิด โทจิ"]
     lines += [f"item.jjk:{w}={v[0]}" for w, v in WEAPONS.items()]
     txt = "\n".join(lines) + "\n"
     for lang in ("en_US", "th_TH"):
@@ -374,6 +354,231 @@ def build_lang_and_misc():
     wt("BP/functions/hp.mcfunction", "effect @s health_boost 1000000 49 true\neffect @s instant_health 1 6 true\n")
 
 
+# ================= อาวุธ 3D (พิกัดท้องถิ่น: จุดจับมือ = 0,0,0 ใบมีดชี้ +y) =================
+import math
+
+
+def shift_bone(b, dx, dy, dz):
+    b["pivot"] = [round(b["pivot"][0] + dx, 3), round(b["pivot"][1] + dy, 3), round(b["pivot"][2] + dz, 3)]
+    for c in b.get("cubes", []):
+        c["origin"] = [round(c["origin"][0] + dx, 3), round(c["origin"][1] + dy, 3), round(c["origin"][2] + dz, 3)]
+        if "pivot" in c:
+            c["pivot"] = [round(c["pivot"][0] + dx, 3), round(c["pivot"][1] + dy, 3), round(c["pivot"][2] + dz, 3)]
+
+
+def wraps(n, bx, y0=0.0, w=1.4, d=1.2, step=1.0):
+    cs = []
+    for i in range(n):
+        cs.append(cube([-w / 2, y0 + i * step, -d / 2], [w, step * 0.55, d], "tsuka", bx))
+        cs.append(cube([-w / 2 - 0.03, y0 + i * step + step * 0.55, -d / 2 - 0.03], [w + 0.06, step * 0.45, d + 0.06], "tsuka2", bx))
+    return cs
+
+
+def ring(cx, cy, r, n, bx):
+    out = []
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        x, y = cx + r * math.cos(a), cy + r * math.sin(a)
+        if k % 2 == 0:
+            out.append(cube([x - 0.7, y - 0.3, -0.3], [1.4, 0.6, 0.6], "chain", bx,
+                            rot=[0, 0, round(math.degrees(a) + 90, 1)], pivot=[x, y, 0]))
+        else:
+            out.append(cube([x - 0.3, y - 0.3, -0.7], [0.6, 0.6, 1.4], "steel_d", bx))
+    return out
+
+
+def droop(x, y_top, n, bx):
+    return [cube([x - (0.45 if i % 2 == 0 else 0.2), y_top - 1.2 * (i + 1), -(0.2 if i % 2 == 0 else 0.45)],
+                 [0.9 if i % 2 == 0 else 0.4, 1.1, 0.4 if i % 2 == 0 else 0.9], "chain" if i % 2 == 0 else "steel_d", bx)
+            for i in range(n)]
+
+
+def katana(p, bx):
+    root = {"name": f"{p}_root", "pivot": [0, 0, 0], "cubes":
+            wraps(9, bx, 0.0)
+            + [cube([-1.1, -1.4, -1.0], [2.2, 1.4, 2.0], "steel_d", bx),  # kashira
+               cube([-2.0, 9.0, -1.6], [4.0, 0.7, 3.2], "steel_d", bx),  # tsuba
+               cube([-1.7, 9.7, -1.3], [3.4, 0.4, 2.6], "gold", bx),  # habaki
+               cube([-0.9, 10.1, -0.5], [1.8, 1.0, 1.0], "gold", bx)]}
+    for k in range(8):  # พู่ขนฟูใกล้ด้าม ตามภาพ
+        ang = -75 + k * 20
+        root["cubes"].append(cube([0.7, 8.2, -0.4 + (k % 3) * 0.3], [0.55, 3.4, 0.3], "tassel" if k % 2 == 0 else "tassel_d", bx,
+                                  rot=[0, 0, ang], pivot=[0.7, 8.2, 0]))
+        root["cubes"].append(cube([-1.25, 8.2, -0.4 + (k % 3) * 0.3], [0.55, 3.0, 0.3], "tassel_d" if k % 2 == 0 else "tassel", bx,
+                                  rot=[0, 0, -ang], pivot=[-0.7, 8.2, 0]))
+    bones, prev, y0, seg, n = [root], root["name"], 10.6, 2.8, 8
+    for i in range(n):
+        y = y0 + i * seg
+        cubes = [cube([-0.95, y, -0.2], [1.9, seg + 0.04, 0.4], "bladeM", bx),
+                 cube([0.55, y, -0.25], [0.45, seg + 0.04, 0.5], "bladeE", bx)]
+        if i % 2 == 0:
+            cubes.append(cube([-0.5, y + 0.7, -0.27], [0.6, 0.5, 0.54], "etch", bx))
+            cubes.append(cube([-0.2, y + 1.7, -0.27], [0.5, 0.4, 0.54], "etch", bx))
+        if i == n - 1:
+            cubes.append(cube([-0.55, y + seg, -0.18], [1.1, 1.3, 0.36], "bladeE", bx))
+        b = {"name": f"{p}_b{i}", "parent": prev, "pivot": [0, y, 0], "cubes": cubes}
+        if i > 0:
+            b["rotation"] = [0, 0, -2.4]
+        bones.append(b); prev = b["name"]
+    return bones
+
+
+def spear(p, bx):  # หอกพลิกฟ้า: มีดสั้นด้ามพัน กั้นสีขาว ใบมีดขั้นบันได
+    cubes = wraps(7, bx, 0.0, 1.3, 1.1) + [
+        cube([-1.0, -1.2, -0.9], [2.0, 1.2, 1.8], "white", bx),
+        cube([-1.9, 7.0, -1.9], [3.8, 0.8, 3.8], "white", bx),
+        cube([-0.5, 7.8, -2.0], [1.0, 0.6, 0.3], "etch", bx), cube([-0.5, 7.8, 1.7], [1.0, 0.6, 0.3], "etch", bx),
+        cube([-1.4, 8.6, -0.3], [2.8, 4.5, 0.6], "bladeM", bx), cube([0.9, 8.6, -0.35], [0.5, 4.5, 0.7], "bladeE", bx),
+        cube([-1.0, 13.1, -0.3], [2.0, 3.6, 0.6], "bladeM", bx), cube([0.6, 13.1, -0.35], [0.4, 3.6, 0.7], "bladeE", bx),
+        cube([-1.4, 16.7, -0.3], [2.8, 2.2, 0.6], "bladeM", bx), cube([-0.4, 18.9, -0.3], [0.8, 1.6, 0.6], "bladeE", bx),
+        cube([-0.45, 9.6, -0.38], [0.9, 2.2, 0.76], "etch", bx),
+    ]
+    return [{"name": f"{p}_root", "pivot": [0, 0, 0], "cubes": cubes}]
+
+
+def chainw(p, bx):  # โซ่หมื่นลี้: ด้ามจับ + ปลายหอก + ขดโซ่ + โซ่ห้อย
+    cubes = wraps(6, bx, 0.0, 1.3, 1.1) + [
+        cube([-0.9, -1.0, -0.9], [1.8, 1.0, 1.8], "steel_d", bx),
+        cube([-1.5, 6.0, -1.5], [3.0, 0.7, 3.0], "steel_d", bx),
+        cube([-1.0, 6.7, -0.25], [2.0, 4.0, 0.5], "steel", bx), cube([-0.6, 10.7, -0.25], [1.2, 2.4, 0.5], "bladeE", bx),
+    ] + ring(4.6, 2.6, 3.4, 12, bx) + droop(0.0, -1.0, 9, bx)
+    return [{"name": f"{p}_root", "pivot": [0, 0, 0], "cubes": cubes}]
+
+
+def yuun(p, bx):  # ยูอุน: กระบอง 3 ท่อน เชื่อมข้อต่อโซ่
+    cubes = []
+    for i, (y0, col) in enumerate(((0.0, "green"), (11.0, "grip"), (22.0, "green"))):
+        cubes += [cube([-0.7, y0, -0.7], [1.4, 9.0, 1.4], col, bx),
+                  cube([-0.95, y0 - 0.2, -0.95], [1.9, 0.9, 1.9], "steel", bx),
+                  cube([-0.95, y0 + 8.3, -0.95], [1.9, 0.9, 1.9], "steel", bx)]
+        for k in range(3):
+            cubes.append(cube([-0.78, y0 + 2.2 + k * 2.0, -0.78], [1.56, 0.35, 1.56], "gold" if col == "green" else "steel_d", bx))
+        if i < 2:
+            cubes += [cube([-0.25, y0 + 9.2, -0.7], [0.5, 1.8, 1.4], "chain", bx),
+                      cube([-0.7, y0 + 9.4, -0.25], [1.4, 1.4, 0.5], "steel_d", bx)]
+    cubes.append(cube([-0.6, 31.2, -0.6], [1.2, 0.8, 1.2], "steel", bx))
+    return [{"name": f"{p}_root", "pivot": [0, 0, 0], "cubes": cubes}]
+
+
+def pistol(p, bx):  # กริปแนวตั้งในมือ ลำกล้องชี้ -z
+    cubes = [
+        cube([-0.85, -2.0, -1.0], [1.7, 5.0, 2.0], "grip", bx),
+        cube([-0.9, -2.2, -1.1], [1.8, 0.6, 2.2], "steel_d", bx),
+        cube([-0.9, 3.0, -7.5], [1.8, 2.3, 9.5], "steel_d", bx), cube([-0.55, 5.3, -7.2], [1.1, 0.5, 8.6], "steel", bx),
+        cube([-0.45, 3.5, -9.0], [0.9, 0.9, 1.6], "steel", bx),
+        cube([-0.25, 1.8, -3.6], [0.5, 1.2, 0.4], "steel_d", bx), cube([-0.25, 1.6, -3.6], [0.5, 0.35, 3.0], "steel_d", bx),
+        cube([-0.25, 2.0, -2.2], [0.5, 1.0, 0.35], "steel", bx),
+        cube([-0.4, 5.3, 1.2], [0.8, 0.6, 0.5], "steel", bx),
+    ]
+    return [{"name": f"{p}_root", "pivot": [0, 0, 0], "cubes": cubes}]
+
+
+WBUILD = {  # key -> (prefix ของ bone, ฟังก์ชัน)  ลำดับ = ค่า jjk:weapon 1..5
+    "split_soul_katana": ("sword", katana), "inverted_spear": ("spear", spear), "pistol_9mm": ("pistol", pistol),
+    "playful_cloud": ("yuun", yuun), "chain_thousand": ("chainsp", chainw),
+}
+WORDER = ["split_soul_katana", "inverted_spear", "pistol_9mm", "playful_cloud", "chain_thousand"]
+
+
+def build_attachables():
+    im = Img(32, 16)
+    for n, c in PALETTE.items():
+        im.set(PIDX[n], 0, c)
+    im.save("RP/textures/models/jjk_weapons.png")
+    geos = []
+    for key, (prefix, fn) in WBUILD.items():
+        geos.append({"description": {"identifier": f"geometry.jjk_w_{key}", "texture_width": 32, "texture_height": 16,
+                                     "visible_bounds_width": 4, "visible_bounds_height": 4, "visible_bounds_offset": [0, 1, 0]},
+                     "bones": fn(prefix, 0)})
+        wj(f"RP/attachables/{key}.json", {
+            "format_version": "1.10.0",
+            "minecraft:attachable": {"description": {
+                "identifier": f"jjk:{key}",
+                "materials": {"default": "entity_alphatest", "enchanted": "entity_alphatest_glint"},
+                "textures": {"default": "textures/models/jjk_weapons", "enchanted": "textures/misc/enchanted_item_glint"},
+                "geometry": {"default": f"geometry.jjk_w_{key}"},
+                "animations": {"hold1": f"animation.jjk_w.{key}.first", "hold3": f"animation.jjk_w.{key}.third"},
+                "scripts": {"animate": [{"hold1": "c.is_first_person"}, {"hold3": "!c.is_first_person"}]},
+                "render_controllers": ["controller.render.item_default"],
+            }},
+        })
+    wj("RP/models/entity/jjk_weapons.geo.json", {"format_version": "1.12.0", "minecraft:geometry": geos})
+    # ท่าถือในมือ: ค่าเริ่มต้น = ไม่ปรับ ยังไม่ได้ทดสอบในเกม แก้ตัวเลขที่นี่ได้ (position/rotation/scale)
+    anims = {}
+    for key, (prefix, _) in WBUILD.items():
+        for view in ("first", "third"):
+            anims[f"animation.jjk_w.{key}.{view}"] = {"loop": True, "bones": {f"{prefix}_root": {
+                "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": 1}}}
+    wj("RP/animations/weapons.animation.json", {"format_version": "1.8.0", "animations": anims})
+
+
+def build_spawn_egg():
+    im = Img(16, 16)
+    for y in range(1, 15):
+        t = (y - 1) / 13.0
+        half = round(2.0 + 4.6 * math.sin(math.pi * (0.15 + 0.85 * t) ) ) if y < 14 else 3
+        for x in range(8 - half, 8 + half):
+            c = (28, 28, 34)
+            if (x * 3 + y * 5) % 7 == 0: c = (122, 60, 173)
+            if y in (7, 8): c = (122, 60, 173)
+            im.set(x, y, c)
+    im.set(6, 4, (240, 240, 240)); im.set(5, 3, (240, 240, 240))
+    im.save("RP/textures/items/jjk_toji_spawn_egg.png")
+    wj("BP/items/toji_spawn_egg.json", {
+        "format_version": ITEM_FV,
+        "minecraft:item": {
+            "description": {"identifier": "jjk:toji_spawn_egg",
+                            "menu_category": {"category": "nature", "group": "itemGroup.name.spawnEgg"}},
+            "components": {"minecraft:icon": {"textures": {"default": "jjk_toji_spawn_egg"}},
+                           "minecraft:entity_placer": {"entity": "jjk:toji"}},
+        },
+    })
+    return {"jjk_toji_spawn_egg": {"textures": "textures/items/jjk_toji_spawn_egg"}}
+
+
+def build_toji_animations():
+    R = lambda *k: {str(t): v for t, v in k}
+    def arm(r_pose, l_pose=None, body=None):
+        d = {"rightArm": {"rotation": r_pose}}
+        if l_pose: d["leftArm"] = {"rotation": l_pose}
+        if body: d["body"] = {"rotation": body}
+        return d
+    A = {"animation.jjk_toji.walk": {"loop": True, "bones": {
+            "leftArm": {"rotation": ["math.cos(query.modified_distance_moved * 38.17) * -30", 0, 0]},
+            "rightArm": {"rotation": ["math.cos(query.modified_distance_moved * 38.17) * 30", 0, 0]},
+            "leftLeg": {"rotation": ["math.cos(query.modified_distance_moved * 38.17) * 30", 0, 0]},
+            "rightLeg": {"rotation": ["math.cos(query.modified_distance_moved * 38.17) * -30", 0, 0]}}},
+         "animation.jjk_toji.raise": {"loop": True, "bones": {"rightArm": {"rotation": [-40, 0, 0]}}}}
+    def anim(name, length, bones):
+        A[f"animation.jjk_toji.{name}"] = {"loop": "hold_on_last_frame", "animation_length": length, "bones": bones}
+    # เตรียมท่า (windup) / โจมตี (strike) แยกตามอาวุธ: 1 ดาบ 2 หอก 3 ปืน 4 ยูอุน 5 โซ่
+    anim("windup_1", 0.35, {"rightArm": {"rotation": R((0, [-40, 0, 0]), (0.35, [-165, 0, 18]))}, "body": {"rotation": R((0, [0, 0, 0]), (0.35, [-8, 18, 0]))}})
+    anim("strike_1", 0.2, {"rightArm": {"rotation": R((0, [-165, 0, 18]), (0.2, [-15, 0, -12]))}, "body": {"rotation": R((0, [-8, 18, 0]), (0.2, [12, -22, 0]))}})
+    anim("windup_2", 0.3, {"rightArm": {"rotation": R((0, [-40, 0, 0]), (0.3, [-110, 0, 0]))}, "body": {"rotation": R((0, [0, 0, 0]), (0.3, [10, -28, 0]))}})
+    anim("strike_2", 0.2, {"rightArm": {"rotation": R((0, [-110, 0, 0]), (0.2, [-95, 0, 0]))}, "body": {"rotation": R((0, [10, -28, 0]), (0.2, [25, 20, 0]))}})
+    anim("windup_3", 0.2, {"rightArm": {"rotation": R((0, [-40, 0, 0]), (0.2, [-92, 0, 4]))}, "leftArm": {"rotation": R((0, [0, 0, 0]), (0.2, [-80, 0, 14]))}})
+    anim("strike_3", 0.15, {"rightArm": {"rotation": R((0, [-92, 0, 4]), (0.06, [-112, 0, 4]), (0.15, [-92, 0, 4]))}, "leftArm": {"rotation": [-80, 0, 14]}})
+    anim("windup_4", 0.25, {"rightArm": {"rotation": R((0, [-40, 0, 0]), (0.25, [-85, 0, -35]))}, "leftArm": {"rotation": R((0, [0, 0, 0]), (0.25, [-85, 0, 35]))}})
+    anim("strike_4", 0.25, {"rightArm": {"rotation": R((0, [-85, 0, -35]), (0.25, [-95, 0, -30]))}, "leftArm": {"rotation": R((0, [-85, 0, 35]), (0.25, [-95, 0, 30]))}})
+    anim("windup_5", 0.6, {"rightArm": {"rotation": R((0, [-40, 0, 0]), (0.6, [-175, 0, 0]))}, "leftArm": {"rotation": R((0, [0, 0, 0]), (0.6, [-60, 0, 25]))}})
+    anim("strike_5", 0.3, {"rightArm": {"rotation": R((0, [-175, 0, 0]), (0.3, [-35, 0, -8]))}, "body": {"rotation": R((0, [0, 0, 0]), (0.3, [15, 0, 0]))}})
+    wj("RP/animations/toji.animation.json", {"format_version": "1.8.0", "animations": A})
+    sel = lambda pre: [{f"{pre}_{i}": f"query.property('jjk:weapon') == {i}"} for i in range(1, 6)]
+    wj("RP/animation_controllers/toji.animation_controllers.json", {
+        "format_version": "1.10.0",
+        "animation_controllers": {"controller.animation.jjk_toji.combat": {"initial_state": "default", "states": {
+            "default": {"transitions": [{"ready": "query.property('jjk:weapon') > 0"}], "blend_transition": 0.1},
+            "ready": {"animations": ["raise"], "blend_transition": 0.15, "transitions": [
+                {"default": "query.property('jjk:weapon') == 0"},
+                {"windup": "query.property('jjk:action') == 1"}, {"strike": "query.property('jjk:action') == 2"}]},
+            "windup": {"animations": sel("windup"), "blend_transition": 0.1, "transitions": [
+                {"strike": "query.property('jjk:action') == 2"}, {"ready": "query.property('jjk:action') == 0"}]},
+            "strike": {"animations": sel("strike"), "blend_transition": 0.05, "transitions": [
+                {"ready": "query.property('jjk:action') == 0"}, {"windup": "query.property('jjk:action') == 1"}]},
+        }}},
+    })
+
+
 # ---------------- ตรวจ + แพ็ก ----------------
 def validate():
     errs, ids = [], set()
@@ -400,7 +605,7 @@ def validate():
     rc = json.load(open(os.path.join(RP, "render_controllers/toji.render_controllers.json")))
     for pv in rc["render_controllers"]["controller.render.jjk_toji"]["part_visibility"][1:]:
         for k in pv:
-            if k not in bones: errs.append(f"bone ไม่พบ {k}")
+            if not any(bn == k or (k.endswith("*") and bn.startswith(k[:-1])) for bn in bones): errs.append(f"bone ไม่พบ {k}")
     for b in g["minecraft:geometry"][0]["bones"]:
         p = b.get("parent")
         if p and p not in bones: errs.append(f"parent ไม่พบ {p}")
@@ -408,6 +613,16 @@ def validate():
             if isinstance(c["uv"], list):
                 u, v = c["uv"]; w_, h_, d_ = c["size"]
                 if u + 2 * d_ + 2 * w_ > 64 or v + d_ + h_ > 64: errs.append(f"UV ล้น {b['name']}")
+    wg = json.load(open(os.path.join(RP, "models/entity/jjk_weapons.geo.json")))["minecraft:geometry"]
+    for ge in wg:
+        names = [b["name"] for b in ge["bones"]]
+        if len(set(names)) != len(names): errs.append("bone ซ้ำใน " + ge["description"]["identifier"])
+        for b in ge["bones"]:
+            if b.get("parent") and b["parent"] not in names: errs.append("parent ไม่พบ " + b["parent"])
+    for w in WEAPONS:
+        if not os.path.exists(os.path.join(RP, f"attachables/{w}.json")): errs.append(f"attachable ขาด {w}")
+    for need in ("BP/items/toji_spawn_egg.json", "RP/animation_controllers/toji.animation_controllers.json", "RP/textures/models/jjk_weapons.png"):
+        if not os.path.exists(os.path.join(ROOT, need)): errs.append("ไฟล์ขาด " + need)
     for s in ("main.js", "ai.js"):
         if not os.path.exists(os.path.join(BP, "scripts", s)): errs.append(f"script ขาด {s}")
     return errs
@@ -429,7 +644,7 @@ def pack():
 if __name__ == "__main__":
     paint_entity_texture()
     wj("RP/models/entity/toji.geo.json", geo())
-    build_items(); build_entity(); build_lang_and_misc()
+    build_attachables(); build_items(); build_entity(); build_lang_and_misc()
     e = validate()
     if e:
         print("\n".join(e)); sys.exit(1)

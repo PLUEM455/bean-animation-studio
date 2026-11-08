@@ -41,6 +41,13 @@ function setWeapon(t, s, id) {
     warn(e);
   }
 }
+function act(t, v) {
+  try {
+    if (t.isValid) t.setProperty("jjk:action", v); // 0 ปกติ, 1 เตรียมท่า, 2 โจมตี (ใช้เล่นแอนิเมชันฝั่งไคลเอนต์)
+  } catch (e) {
+    warn(e);
+  }
+}
 function fx(dim, loc, particle, sound) {
   try {
     if (particle) dim.spawnParticle(particle, loc);
@@ -120,7 +127,10 @@ function doSword(t, s, target, now) {
   s.busyUntil = now + C.busy;
   s.cd.sword = now + C.cooldown;
   s.last = "sword";
+  act(t, 1);
   system.runTimeout(() => {
+    act(t, 2);
+    system.runTimeout(() => act(t, 0), 10);
     if (!alive(t, target) || dist(t.location, target.location) > C.reach) return;
     hit(t, target, C.damage, EntityDamageCause.magic, 0.8); // magic = ทะลุเกราะ
     fx(t.dimension, target.location, "minecraft:critical_hit_emitter", "item.trident.hit");
@@ -133,7 +143,10 @@ function doSpear(t, s, target, now) {
   s.busyUntil = now + C.busy;
   s.cd.spear = now + C.cooldown;
   s.last = "spear";
+  act(t, 1);
   system.runTimeout(() => {
+    act(t, 2);
+    system.runTimeout(() => act(t, 0), C.flight + 10);
     if (!alive(t, target)) return;
     const d = dir2d(t.location, target.location);
     try {
@@ -156,7 +169,10 @@ function doPistol(t, s, target, now) {
   s.busyUntil = now + C.busy;
   s.cd.pistol = now + C.cooldown;
   s.last = "pistol";
+  act(t, 1);
   system.runTimeout(() => {
+    act(t, 2);
+    system.runTimeout(() => act(t, 0), 8);
     if (!alive(t, target) || dist(t.location, target.location) > C.maxDist + 0.5) return;
     hit(t, target, C.damage, EntityDamageCause.entityAttack, 0);
     try {
@@ -176,6 +192,7 @@ function doYuun(t, s, target, now) {
   s.blockUntil = now + C.duration;
   s.cd.yuun = now + C.cooldown;
   s.last = "yuun";
+  act(t, 2);
   fx(t.dimension, t.location, null, "random.anvil_land");
 }
 
@@ -185,6 +202,7 @@ function doChain(t, s, target, now) {
   s.busyUntil = now + C.busy;
   s.cd.chain = now + C.cooldown;
   s.last = "chain";
+  act(t, 1);
   // ช่วงต่อหอกกับโซ่: โทจิขยับไม่ได้ เปิดโอกาสให้ผู้เล่นสวนกลับ
   try {
     t.addEffect("slowness", C.windup, { amplifier: 6, showParticles: false });
@@ -194,6 +212,8 @@ function doChain(t, s, target, now) {
   fx(t.dimension, t.location, null, "random.anvil_land");
   system.runTimeout(() => alive(t, target) && line(t.dimension, t.location, target.location, "minecraft:critical_hit_emitter"), Math.floor(C.windup / 2));
   system.runTimeout(() => {
+    act(t, 2);
+    system.runTimeout(() => act(t, 0), 10);
     if (!alive(t, target) || dist(t.location, target.location) > C.maxDist) return;
     hit(t, target, C.damage, EntityDamageCause.magic, 1.0);
     line(t.dimension, t.location, target.location, "minecraft:critical_hit_emitter");
@@ -209,12 +229,16 @@ function think(t, now) {
   if (s.blockUntil && now >= s.blockUntil) {
     s.blockUntil = 0;
     if (s.weapon === W.yuun) setWeapon(t, s, W.none);
+    act(t, 0);
   }
   const d = t.dimension;
   const targets = d.getPlayers({ location: t.location, maxDistance: 40, closest: 1, excludeGameModes: [GameMode.Spectator] });
   const target = targets[0];
   if (!target) {
-    if (s.weapon !== W.none && !s.blockUntil) setWeapon(t, s, W.none);
+    if (s.weapon !== W.none && !s.blockUntil) {
+      setWeapon(t, s, W.none);
+      act(t, 0);
+    }
     return;
   }
   const near = d.getPlayers({ location: t.location, maxDistance: TUNING.yuun.nearRadius, excludeGameModes: [GameMode.Spectator] }).length;

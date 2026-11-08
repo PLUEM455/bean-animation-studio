@@ -1,0 +1,185 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.jjk_w.split_soul_katana.first": {
+      "loop": true,
+      "bones": {
+        "sword_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.split_soul_katana.third": {
+      "loop": true,
+      "bones": {
+        "sword_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.inverted_spear.first": {
+      "loop": true,
+      "bones": {
+        "spear_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.inverted_spear.third": {
+      "loop": true,
+      "bones": {
+        "spear_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.pistol_9mm.first": {
+      "loop": true,
+      "bones": {
+        "pistol_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.pistol_9mm.third": {
+      "loop": true,
+      "bones": {
+        "pistol_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.playful_cloud.first": {
+      "loop": true,
+      "bones": {
+        "yuun_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.playful_cloud.third": {
+      "loop": true,
+      "bones": {
+        "yuun_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.chain_thousand.first": {
+      "loop": true,
+      "bones": {
+        "chainsp_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "animation.jjk_w.chain_thousand.third": {
+      "loop": true,
+      "bones": {
+        "chainsp_root": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    }
+  }
+}

@@ -16,6 +16,9 @@
     },
     "jjk_pistol_9mm": {
       "textures": "textures/items/jjk_pistol_9mm"
+    },
+    "jjk_toji_spawn_egg": {
+      "textures": "textures/items/jjk_toji_spawn_egg"
     }
   }
 }

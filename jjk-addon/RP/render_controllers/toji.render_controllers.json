@@ -16,19 +16,19 @@
           "*": true
         },
         {
-          "sword": "query.property('jjk:weapon') == 1"
+          "sword*": "query.property('jjk:weapon') == 1"
         },
         {
-          "spear": "query.property('jjk:weapon') == 2"
+          "spear*": "query.property('jjk:weapon') == 2"
         },
         {
-          "pistol": "query.property('jjk:weapon') == 3"
+          "pistol*": "query.property('jjk:weapon') == 3"
         },
         {
-          "yuun": "query.property('jjk:weapon') == 4"
+          "yuun*": "query.property('jjk:weapon') == 4"
         },
         {
-          "chain_spear": "query.property('jjk:weapon') == 5"
+          "chainsp*": "query.property('jjk:weapon') == 5"
         }
       ]
     }

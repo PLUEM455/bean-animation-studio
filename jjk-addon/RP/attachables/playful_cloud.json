@@ -1,0 +1,36 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:attachable": {
+    "description": {
+      "identifier": "jjk:playful_cloud",
+      "materials": {
+        "default": "entity_alphatest",
+        "enchanted": "entity_alphatest_glint"
+      },
+      "textures": {
+        "default": "textures/models/jjk_weapons",
+        "enchanted": "textures/misc/enchanted_item_glint"
+      },
+      "geometry": {
+        "default": "geometry.jjk_w_playful_cloud"
+      },
+      "animations": {
+        "hold1": "animation.jjk_w.playful_cloud.first",
+        "hold3": "animation.jjk_w.playful_cloud.third"
+      },
+      "scripts": {
+        "animate": [
+          {
+            "hold1": "c.is_first_person"
+          },
+          {
+            "hold3": "!c.is_first_person"
+          }
+        ]
+      },
+      "render_controllers": [
+        "controller.render.item_default"
+      ]
+    }
+  }
+}

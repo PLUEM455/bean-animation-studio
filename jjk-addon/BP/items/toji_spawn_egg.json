@@ -1,0 +1,22 @@
+{
+  "format_version": "1.21.50",
+  "minecraft:item": {
+    "description": {
+      "identifier": "jjk:toji_spawn_egg",
+      "menu_category": {
+        "category": "nature",
+        "group": "itemGroup.name.spawnEgg"
+      }
+    },
+    "components": {
+      "minecraft:icon": {
+        "textures": {
+          "default": "jjk_toji_spawn_egg"
+        }
+      },
+      "minecraft:entity_placer": {
+        "entity": "jjk:toji"
+      }
+    }
+  }
+}
