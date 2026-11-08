@@ -1,0 +1,36 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "jjk:toji",
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "default": "textures/entity/toji"
+      },
+      "geometry": {
+        "default": "geometry.jjk_toji"
+      },
+      "animations": {
+        "walk": "animation.jjk_toji.walk",
+        "raise": "animation.jjk_toji.raise"
+      },
+      "scripts": {
+        "animate": [
+          "walk",
+          {
+            "raise": "query.property('jjk:weapon') > 0"
+          }
+        ]
+      },
+      "render_controllers": [
+        "controller.render.jjk_toji"
+      ],
+      "spawn_egg": {
+        "base_color": "#1c1c22",
+        "overlay_color": "#7a3cad"
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "resource_pack_name": "jjk",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "jjk_split_soul_katana": {
+      "textures": "textures/items/jjk_split_soul_katana"
+    },
+    "jjk_inverted_spear": {
+      "textures": "textures/items/jjk_inverted_spear"
+    },
+    "jjk_chain_thousand": {
+      "textures": "textures/items/jjk_chain_thousand"
+    },
+    "jjk_playful_cloud": {
+      "textures": "textures/items/jjk_playful_cloud"
+    },
+    "jjk_pistol_9mm": {
+      "textures": "textures/items/jjk_pistol_9mm"
+    }
+  }
+}

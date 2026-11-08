@@ -1,0 +1,38 @@
+{
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "item",
+          "name": "jjk:split_soul_katana",
+          "weight": 1
+        },
+        {
+          "type": "item",
+          "name": "jjk:inverted_spear",
+          "weight": 1
+        },
+        {
+          "type": "item",
+          "name": "jjk:chain_thousand",
+          "weight": 1
+        },
+        {
+          "type": "item",
+          "name": "jjk:playful_cloud",
+          "weight": 1
+        },
+        {
+          "type": "item",
+          "name": "jjk:pistol_9mm",
+          "weight": 1
+        },
+        {
+          "type": "empty",
+          "weight": 5
+        }
+      ]
+    }
+  ]
+}

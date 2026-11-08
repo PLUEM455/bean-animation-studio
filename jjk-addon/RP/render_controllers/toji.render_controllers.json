@@ -1,0 +1,36 @@
+{
+  "format_version": "1.8.0",
+  "render_controllers": {
+    "controller.render.jjk_toji": {
+      "geometry": "Geometry.default",
+      "materials": [
+        {
+          "*": "Material.default"
+        }
+      ],
+      "textures": [
+        "Texture.default"
+      ],
+      "part_visibility": [
+        {
+          "*": true
+        },
+        {
+          "sword": "query.property('jjk:weapon') == 1"
+        },
+        {
+          "spear": "query.property('jjk:weapon') == 2"
+        },
+        {
+          "pistol": "query.property('jjk:weapon') == 3"
+        },
+        {
+          "yuun": "query.property('jjk:weapon') == 4"
+        },
+        {
+          "chain_spear": "query.property('jjk:weapon') == 5"
+        }
+      ]
+    }
+  }
+}

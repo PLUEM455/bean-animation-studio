@@ -1,0 +1,56 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "JJK Toji (BP)",
+    "description": "Toji mob + 5 weapons",
+    "uuid": "190aa883-654a-5f79-b621-2605d494a7c4",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      60
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "9fa2be37-7c24-58fb-af33-39300e51cee5",
+      "version": [
+        1,
+        0,
+        0
+      ],
+      "description": "data"
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "fdbfb268-f4f5-5145-a937-f81e71bc59cc",
+      "version": [
+        1,
+        0,
+        0
+      ],
+      "entry": "scripts/main.js",
+      "description": "toji ai"
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "01eeb9ca-36d8-52f2-baec-64b0a56a3cb5",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.11.0"
+    }
+  ]
+}
