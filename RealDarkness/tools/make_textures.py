@@ -30,22 +30,22 @@ def fbm(x, y, seed, octaves=4):
 def sun():
     # 64x64, drawn additively (black = transparent): limb-darkened disc, granulation, corona.
     n = 64
-    img = Image.new("RGB", (n, n))
+    img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
     c, r = (n - 1) / 2, 13.0
     for y in range(n):
         for x in range(n):
             d = math.hypot(x - c, y - c)
             if d <= r:
                 mu = math.sqrt(max(0.0, 1 - (d / r) ** 2))
-                limb = 0.55 + 0.45 * mu  # limb darkening
+                limb = 0.82 + 0.18 * mu  # gentle limb darkening
                 g = 0.92 + 0.08 * fbm(x / 3, y / 3, 7)
                 k = limb * g
-                col = (clamp(255 * min(1, k * 1.08)), clamp(244 * k), clamp(205 * k * k))
+                col = (clamp(255 * min(1, k * 1.08)), clamp(244 * k), clamp(215 * k), 255)
             else:
                 t = (d - r) / (c - r)
                 ray = 0.75 + 0.25 * noise(math.atan2(y - c, x - c) * 6, 0, 3)
                 g = 0.6 * max(0.0, 1 - t) ** 3 * ray
-                col = (clamp(255 * g), clamp(190 * g), clamp(95 * g * g))
+                col = (255, clamp(190 + 40 * g), clamp(95 + 60 * g), clamp(255 * g))
             img.putpixel((x, y), col)
     img.save(f"{ROOT}/RealDarkness_Sky_RP/textures/environment/sun.png")
 
@@ -67,7 +67,7 @@ def moon():
     # 4x2 grid of 128x128 phases: full, waning gibbous, last quarter, waning crescent,
     # new, waxing crescent, first quarter, waxing gibbous. Sphere-lit terminator.
     n, r = 128, 40.0
-    img = Image.new("RGB", (n * 4, n * 2))
+    img = Image.new("RGBA", (n * 4, n * 2), (0, 0, 0, 0))
     # angle of the sun direction around the moon (0 = full, pi = new); sign = lit side
     phases = [0.0, -0.25, -0.5, -0.75, 1.0, 0.75, 0.5, 0.25]
     for i, ph in enumerate(phases):
@@ -79,19 +79,22 @@ def moon():
             for x in range(n):
                 u, v = (x - c) / r, (y - c) / r
                 d2 = u * u + v * v
-                col = (0, 0, 0)
-                if d2 <= 1:
+                edge = r - math.sqrt(d2) * r  # pixels inside the rim
+                if edge <= -0.5:
+                    continue  # transparent outside the disc (no halo)
+                if True:
+                    d2 = min(d2, 1.0)
                     z = math.sqrt(1 - d2)
                     lam = u * lx + z * lz
-                    lit = max(0.0, min(1.0, lam * 3 + 0.15))  # soft terminator
+                    # Moon is almost uniformly bright (no limb darkening); soft terminator.
+                    lit = max(0.0, min(1.0, (lam + 0.06) / 0.12))
+                    lit = lit * lit * (3 - 2 * lit)
+                    if lit <= 0.0 or ph == 1.0:  # new moon: nothing visible
+                        continue  # unlit side is see-through, like the real sky
                     alb = moon_surface(u, v)
-                    b = alb * (0.35 + 0.65 * lit) * lit + 0.035 * (1 - lit)  # earthshine
-                    col = (clamp(250 * b), clamp(248 * b), clamp(240 * b + 6 * (1 - lit)))
-                else:
-                    dd = math.sqrt(d2) - 1
-                    if dd < 0.25 and ph not in (1.0,):
-                        g = (1 - dd / 0.25) ** 2 * (1 - abs(ph)) * 0.35
-                        col = (clamp(120 * g), clamp(130 * g), clamp(160 * g))
+                    b = 0.25 + 0.75 * alb
+                    a = clamp(255 * min(1.0, edge + 0.5) * lit)
+                    col = (clamp(250 * b), clamp(247 * b), clamp(238 * b), a)
                 img.putpixel((ox + x, oy + y), col)
     img.save(f"{ROOT}/RealDarkness_Sky_RP/textures/environment/moon_phases.png")
 
