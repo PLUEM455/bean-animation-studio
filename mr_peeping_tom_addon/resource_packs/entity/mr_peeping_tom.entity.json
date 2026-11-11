@@ -1,0 +1,48 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "custom:mr_peeping_tom",
+      "materials": {
+        "default": "entity_alphatest",
+        "eyes": "entity_alphatest"
+      },
+      "textures": {
+        "default": "textures/entity/mr_peeping_tom/mr_peeping_tom",
+        "eyes": "textures/entity/mr_peeping_tom/mr_peeping_tom_glow"
+      },
+      "geometry": {
+        "default": "geometry.mr_peeping_tom"
+      },
+      "scripts": {
+        "pre_animation": [
+          "variable.pose = query.property('ppt:pose');"
+        ],
+        "animate": [
+          "main_controller"
+        ]
+      },
+      "animations": {
+        "idle_twitch": "animation.peeping_tom.idle_twitch",
+        "peek_lean": "animation.peeping_tom.peek_lean",
+        "stalk_walk": "animation.peeping_tom.stalk_walk",
+        "sprint_chase": "animation.peeping_tom.sprint_chase",
+        "crawl_one_block": "animation.peeping_tom.crawl_one_block",
+        "wall_climb": "animation.peeping_tom.wall_climb",
+        "swim": "animation.peeping_tom.swim",
+        "vanish": "animation.peeping_tom.vanish",
+        "scare": "animation.peeping_tom.scare",
+        "look_at_target": "animation.peeping_tom.look_at_target",
+        "main_controller": "controller.animation.peeping_tom.main"
+      },
+      "render_controllers": [
+        "controller.render.peeping_tom",
+        "controller.render.peeping_tom_eyes"
+      ],
+      "spawn_egg": {
+        "base_color": "#151517",
+        "overlay_color": "#e9e9e4"
+      }
+    }
+  }
+}

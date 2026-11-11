@@ -1,0 +1,148 @@
+{
+  "format_version": "1.26.50",
+  "minecraft:entity": {
+    "description": {
+      "identifier": "custom:mr_peeping_tom",
+      "is_spawnable": true,
+      "is_summonable": true,
+      "spawn_category": "monster",
+      "properties": {
+        "ppt:pose": {
+          "type": "enum",
+          "values": ["idle", "stalk", "peek", "sprint", "crawl", "climb", "swim", "scare", "vanish"],
+          "default": "idle",
+          "client_sync": true
+        }
+      }
+    },
+    "component_groups": {
+      "ppt:mode_observe": {
+        "minecraft:movement": { "value": 0.0 },
+        "minecraft:behavior.look_at_player": {
+          "priority": 1,
+          "look_distance": 64,
+          "probability": 1.0,
+          "angle_of_view_horizontal": 360,
+          "angle_of_view_vertical": 360
+        }
+      },
+      "ppt:mode_stalk": {
+        "minecraft:movement": { "value": 0.18 },
+        "minecraft:behavior.look_at_player": {
+          "priority": 2,
+          "look_distance": 64,
+          "probability": 0.85,
+          "angle_of_view_horizontal": 360,
+          "angle_of_view_vertical": 360
+        },
+        "minecraft:behavior.random_stroll": { "priority": 6, "speed_multiplier": 0.6, "xz_dist": 6, "y_dist": 3 }
+      },
+      "ppt:mode_hunt": {
+        "minecraft:movement": { "value": 0.34 },
+        "minecraft:behavior.nearest_attackable_target": {
+          "priority": 1,
+          "must_see": false,
+          "reselect_targets": true,
+          "within_radius": 64,
+          "entity_types": [
+            {
+              "filters": { "test": "is_family", "subject": "other", "value": "player" },
+              "max_dist": 64
+            }
+          ]
+        },
+        "minecraft:behavior.melee_box_attack": { "priority": 2, "track_target": true, "speed_multiplier": 1.0 }
+      },
+      "ppt:mode_frozen": {
+        "minecraft:movement": { "value": 0.0 }
+      },
+      "ppt:size_hunch": {
+        "minecraft:collision_box": { "width": 0.6, "height": 1.8 }
+      },
+      "ppt:size_crawl": {
+        "minecraft:collision_box": { "width": 0.6, "height": 0.85 }
+      },
+      "ppt:break_doors": {
+        "minecraft:annotation.break_door": {}
+      }
+    },
+    "components": {
+      "minecraft:type_family": { "family": ["peeping_tom", "monster", "mob"] },
+      "minecraft:health": { "value": 100, "max": 100 },
+      "minecraft:damage_sensor": {
+        "triggers": [
+          { "cause": "void", "deals_damage": "yes" },
+          {
+            "cause": "all",
+            "on_damage": { "event": "ppt:hurt" },
+            "deals_damage": "no_but_side_effects_apply"
+          }
+        ]
+      },
+      "minecraft:attack": { "damage": 7 },
+      "minecraft:collision_box": { "width": 0.6, "height": 2.3 },
+      "minecraft:movement": { "value": 0.18 },
+      "minecraft:movement.basic": {},
+      "minecraft:jump.static": {},
+      "minecraft:can_climb": {},
+      "minecraft:navigation.climb": {
+        "can_walk": true,
+        "can_swim": true,
+        "is_amphibious": true,
+        "can_path_over_water": false,
+        "can_pass_doors": true,
+        "can_break_doors": true,
+        "avoid_damage_blocks": true
+      },
+      "minecraft:underwater_movement": { "value": 0.2 },
+      "minecraft:breathable": { "total_supply": 15, "suffocate_time": 0, "breathes_air": true, "breathes_water": true },
+      "minecraft:variable_max_auto_step": { "base_value": 1.25, "jump_prevented_value": 1.0625 },
+      "minecraft:follow_range": { "value": 64, "max": 64 },
+      "minecraft:knockback_resistance": { "value": 1.0 },
+      "minecraft:fire_immune": {},
+      "minecraft:physics": {},
+      "minecraft:pushable": { "is_pushable": false, "is_pushable_by_piston": true },
+      "minecraft:block_movement_slowdown_immunity": {},
+      "minecraft:conditional_bandwidth_optimization": {},
+      "minecraft:is_hidden_when_invisible": {},
+      "minecraft:despawn": { "despawn_from_distance": { "min_distance": 96, "max_distance": 128 } },
+      "minecraft:behavior.look_at_player": { "priority": 7, "look_distance": 48 }
+    },
+    "events": {
+      "minecraft:entity_spawned": {
+        "add": { "component_groups": ["ppt:mode_stalk"] }
+      },
+      "ppt:hurt": {},
+      "ppt:observe": {
+        "add": { "component_groups": ["ppt:mode_observe"] },
+        "remove": { "component_groups": ["ppt:mode_stalk", "ppt:mode_hunt", "ppt:mode_frozen"] }
+      },
+      "ppt:stalk": {
+        "add": { "component_groups": ["ppt:mode_stalk"] },
+        "remove": { "component_groups": ["ppt:mode_observe", "ppt:mode_hunt", "ppt:mode_frozen"] }
+      },
+      "ppt:hunt": {
+        "add": { "component_groups": ["ppt:mode_hunt"] },
+        "remove": { "component_groups": ["ppt:mode_observe", "ppt:mode_stalk", "ppt:mode_frozen"] }
+      },
+      "ppt:freeze": {
+        "add": { "component_groups": ["ppt:mode_frozen"] },
+        "remove": { "component_groups": ["ppt:mode_observe", "ppt:mode_stalk", "ppt:mode_hunt"] }
+      },
+      "ppt:size_tall": {
+        "remove": { "component_groups": ["ppt:size_hunch", "ppt:size_crawl"] }
+      },
+      "ppt:size_hunch": {
+        "add": { "component_groups": ["ppt:size_hunch"] },
+        "remove": { "component_groups": ["ppt:size_crawl"] }
+      },
+      "ppt:size_crawl": {
+        "add": { "component_groups": ["ppt:size_crawl"] },
+        "remove": { "component_groups": ["ppt:size_hunch"] }
+      },
+      "ppt:doors_on": {
+        "add": { "component_groups": ["ppt:break_doors"] }
+      }
+    }
+  }
+}

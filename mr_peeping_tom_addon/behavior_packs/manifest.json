@@ -1,0 +1,54 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Mr. Peeping Tom (BP)",
+    "description": "Psychological horror stalker. He is polite. He is always watching.",
+    "uuid": "e9df146a-a253-4732-8b1c-f7489e40ea43",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      60
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "1b0c1b1a-c808-42c5-9674-5a3a1cca86eb",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "entry": "scripts/main.js",
+      "uuid": "53147558-310a-4c05-aa85-f9927282953d",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.11.0"
+    },
+    {
+      "uuid": "ca43fde2-e488-4679-b0f5-c8672c05e825",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "entity_sounds": {
+    "entities": {
+      "custom:mr_peeping_tom": {
+        "volume": 0.6,
+        "pitch": [
+          0.8,
+          1.0
+        ],
+        "events": {
+          "step": {
+            "sound": "ppt.step",
+            "volume": 0.5,
+            "pitch": [
+              0.8,
+              1.0
+            ]
+          },
+          "hurt": {
+            "sound": "",
+            "volume": 0.0
+          },
+          "death": {
+            "sound": "",
+            "volume": 0.0
+          }
+        }
+      }
+    }
+  }
+}

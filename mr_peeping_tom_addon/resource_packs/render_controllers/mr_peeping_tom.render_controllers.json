@@ -1,0 +1,38 @@
+{
+  "format_version": "1.10.0",
+  "render_controllers": {
+    "controller.render.peeping_tom": {
+      "geometry": "Geometry.default",
+      "materials": [
+        {
+          "*": "Material.default"
+        }
+      ],
+      "textures": [
+        "Texture.default"
+      ],
+      "part_visibility": [
+        {
+          "*": "!query.is_invisible"
+        }
+      ]
+    },
+    "controller.render.peeping_tom_eyes": {
+      "geometry": "Geometry.default",
+      "materials": [
+        {
+          "*": "Material.eyes"
+        }
+      ],
+      "textures": [
+        "Texture.eyes"
+      ],
+      "ignore_lighting": true,
+      "part_visibility": [
+        {
+          "*": "!query.is_invisible && variable.pose != 'vanish'"
+        }
+      ]
+    }
+  }
+}

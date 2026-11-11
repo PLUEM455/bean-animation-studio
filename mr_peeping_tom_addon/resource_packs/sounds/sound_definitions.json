@@ -1,0 +1,184 @@
+{
+  "format_version": "1.20.20",
+  "sound_definitions": {
+    "ppt.voice.day": {
+      "category": "hostile",
+      "min_distance": 6,
+      "max_distance": 64,
+      "sounds": [
+        {
+          "name": "sounds/ppt/day_morning",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        },
+        {
+          "name": "sounds/ppt/day_weather",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.voice.night": {
+      "category": "hostile",
+      "min_distance": 4,
+      "max_distance": 48,
+      "sounds": [
+        {
+          "name": "sounds/ppt/night_comein",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        },
+        {
+          "name": "sounds/ppt/night_run",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.voice.lookup": {
+      "category": "hostile",
+      "min_distance": 4,
+      "max_distance": 32,
+      "sounds": [
+        {
+          "name": "sounds/ppt/night_lookup",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.voice.chuckle": {
+      "category": "hostile",
+      "min_distance": 2,
+      "max_distance": 48,
+      "sounds": [
+        {
+          "name": "sounds/ppt/jumpscare_chuckle",
+          "volume": 1.0,
+          "is3D": false,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.voice.vanish": {
+      "category": "hostile",
+      "min_distance": 4,
+      "max_distance": 48,
+      "sounds": [
+        {
+          "name": "sounds/ppt/vanish_line",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.knock": {
+      "category": "hostile",
+      "min_distance": 1,
+      "max_distance": 16,
+      "sounds": [
+        {
+          "name": "sounds/ppt/knock",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.screech": {
+      "category": "hostile",
+      "min_distance": 2,
+      "max_distance": 48,
+      "sounds": [
+        {
+          "name": "sounds/ppt/screech",
+          "volume": 1.0,
+          "is3D": false,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.drone": {
+      "category": "ambient",
+      "sounds": [
+        {
+          "name": "sounds/ppt/drone",
+          "volume": 0.8,
+          "is3D": false,
+          "stream": true
+        }
+      ]
+    },
+    "ppt.twig": {
+      "category": "neutral",
+      "min_distance": 2,
+      "max_distance": 32,
+      "sounds": [
+        {
+          "name": "sounds/ppt/twig",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.smoke": {
+      "category": "hostile",
+      "min_distance": 2,
+      "max_distance": 40,
+      "sounds": [
+        {
+          "name": "sounds/ppt/smoke",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.step": {
+      "category": "hostile",
+      "min_distance": 1,
+      "max_distance": 20,
+      "sounds": [
+        {
+          "name": "sounds/ppt/step",
+          "volume": 0.7,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.glitch": {
+      "category": "hostile",
+      "min_distance": 2,
+      "max_distance": 48,
+      "sounds": [
+        {
+          "name": "sounds/ppt/glitch",
+          "volume": 0.6,
+          "is3D": false,
+          "stream": false
+        }
+      ]
+    },
+    "ppt.breath": {
+      "category": "hostile",
+      "min_distance": 2,
+      "max_distance": 24,
+      "sounds": [
+        {
+          "name": "sounds/ppt/breath",
+          "volume": 1.0,
+          "is3D": true,
+          "stream": false
+        }
+      ]
+    }
+  }
+}

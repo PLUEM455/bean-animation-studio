@@ -1,0 +1,336 @@
+{
+  "format_version": "1.10.0",
+  "animation_controllers": {
+    "controller.animation.peeping_tom.main": {
+      "initial_state": "default",
+      "states": {
+        "vanish": {
+          "animations": [
+            "vanish"
+          ],
+          "blend_transition": 0.08,
+          "transitions": [
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "scare": {
+          "animations": [
+            "scare"
+          ],
+          "blend_transition": 0.08,
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "swim": {
+          "animations": [
+            "swim",
+            "look_at_target"
+          ],
+          "blend_transition": 0.25,
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "climb": {
+          "animations": [
+            "wall_climb"
+          ],
+          "blend_transition": 0.25,
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "crawl": {
+          "animations": [
+            {
+              "crawl_one_block": "math.clamp(q.modified_move_speed * 6, 0.35, 1)"
+            }
+          ],
+          "blend_transition": 0.25,
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "sprint": {
+          "animations": [
+            "sprint_chase",
+            "look_at_target"
+          ],
+          "blend_transition": 0.25,
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "peek": {
+          "animations": [
+            "peek_lean",
+            "look_at_target"
+          ],
+          "blend_transition": 0.25,
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "walk": {
+          "animations": [
+            "stalk_walk",
+            "look_at_target"
+          ],
+          "blend_transition": 0.25,
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "idle": {
+          "animations": [
+            "idle_twitch",
+            "look_at_target"
+          ],
+          "blend_transition": 0.25,
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            }
+          ]
+        },
+        "default": {
+          "transitions": [
+            {
+              "vanish": "v.pose == 'vanish'"
+            },
+            {
+              "scare": "v.pose == 'scare'"
+            },
+            {
+              "swim": "q.is_in_water && v.pose != 'vanish' && v.pose != 'scare'"
+            },
+            {
+              "climb": "v.pose == 'climb' && !q.is_in_water"
+            },
+            {
+              "crawl": "v.pose == 'crawl' && !q.is_in_water"
+            },
+            {
+              "sprint": "v.pose == 'sprint' && !q.is_in_water"
+            },
+            {
+              "peek": "v.pose == 'peek' && q.modified_move_speed < 0.05 && !q.is_in_water"
+            },
+            {
+              "walk": "(v.pose == 'stalk' || v.pose == 'idle' || v.pose == 'peek') && q.modified_move_speed >= 0.05 && !q.is_in_water"
+            },
+            {
+              "idle": "(v.pose == 'stalk' || v.pose == 'idle') && q.modified_move_speed < 0.05 && !q.is_in_water"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
