@@ -1,0 +1,22 @@
+{
+  "format_version": "1.16.100",
+  "minecraft:fog_settings": {
+    "description": {
+      "identifier": "realdarkness:eclipse_annular_2"
+    },
+    "distance": {
+      "air": {
+        "fog_start": 8,
+        "fog_end": 150,
+        "fog_color": "#3a3e48",
+        "render_distance_type": "fixed"
+      },
+      "weather": {
+        "fog_start": 8,
+        "fog_end": 150,
+        "fog_color": "#3a3e48",
+        "render_distance_type": "fixed"
+      }
+    }
+  }
+}

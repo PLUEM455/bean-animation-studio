@@ -47,7 +47,7 @@ def sun():
                 g = 0.6 * max(0.0, 1 - t) ** 3 * ray
                 col = (255, clamp(190 + 40 * g), clamp(95 + 60 * g), clamp(255 * g))
             img.putpixel((x, y), col)
-    img.save(f"{ROOT}/RealDarkness_Sky_RP/textures/environment/sun.png")
+    img.save(f"{ROOT}/RealDarkness_RP/textures/environment/sun.png")
 
 def moon_surface(u, v):
     # u, v in [-1, 1] on the disc; returns albedo 0..1 (maria dark, highlands bright, craters)
@@ -96,7 +96,7 @@ def moon():
                     a = clamp(255 * min(1.0, edge + 0.5) * lit)
                     col = (clamp(250 * b), clamp(247 * b), clamp(238 * b), a)
                 img.putpixel((ox + x, oy + y), col)
-    img.save(f"{ROOT}/RealDarkness_Sky_RP/textures/environment/moon_phases.png")
+    img.save(f"{ROOT}/RealDarkness_RP/textures/environment/moon_phases.png")
 
 def settings_icon():
     # 32x32 gear: iron body, darker inner ring, bevel light from top-left, coal-glow hub.
@@ -152,5 +152,4 @@ if __name__ == "__main__":
     sun(); moon(); settings_icon()
     pack_icon(f"{ROOT}/RealDarkness_BP/pack_icon.png", False)
     pack_icon(f"{ROOT}/RealDarkness_RP/pack_icon.png", False)
-    pack_icon(f"{ROOT}/RealDarkness_Sky_RP/pack_icon.png", True)
     print("textures written")

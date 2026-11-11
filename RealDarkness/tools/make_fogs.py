@@ -1,4 +1,4 @@
-"""Generate fog definitions: 4 darkness levels x 10 night profiles + dusk + eclipse.
+"""Generate fog definitions: 4 darkness levels x 10 night profiles + sun phenomena.
 Run: python3 tools/make_fogs.py"""
 import json, os
 
@@ -34,6 +34,12 @@ for level, (start, end) in LEVELS.items():
     for profile, (mul, color) in PROFILES.items():
         e = max(4.0, round(end * mul, 1))
         write(f"{level}_{profile}", min(round(start * mul, 1), e - 2), e, color)
-write("dusk", 16, 72, "#0b0c12")
-write("eclipse", 0, 40, "#050508")
+# sun phenomena
+write("golden", 24, 140, "#b5652a")        # golden hour (sunrise / sunset)
+write("halo", 64, 220, "#dfe3ee")          # sun halo day: milky-white sky
+write("haze", 16, 110, "#b3a27a")          # hazy / dusty day
+for k, (end, color) in enumerate([(160, "#3a3f4c"), (90, "#16181f"), (40, "#040406")], 1):
+    write(f"eclipse_total_{k}", 0, end, color)          # total solar eclipse, ramps to k=3
+for k, (end, color) in enumerate([(200, "#5a5f6a"), (150, "#3a3e48"), (110, "#262a33")], 1):
+    write(f"eclipse_annular_{k}", 8, end, color)        # annular eclipse, milder
 print(len(os.listdir(OUT)), "fog files")

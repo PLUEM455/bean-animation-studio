@@ -1,7 +1,7 @@
 // Real Darkness — behavior script
 import { world, system, EquipmentSlot, PlayerPermissionLevel, BlockPermutation, MoonPhase, BiomeTypes } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
-import { getBiomeLighting } from "@minecraft/server-graphics";
+import { getBiomeLighting, getBiomeAtmospherics } from "@minecraft/server-graphics";
 
 const NS = "realdarkness";
 const FOG_TAG = "realdarkness";
@@ -88,24 +88,44 @@ function nightProfile(day) {
   return profile;
 }
 
-// Solar eclipse: day after a new-moon night, 10%, around noon for ~1 real minute.
-function eclipseToday(day) {
-  if (world.getDynamicProperty(`${NS}:eclipse_check_day`) !== day) {
+// Day phenomena, decided once per day (silent):
+// after a new-moon night: total eclipse 10%, annular eclipse 10%; otherwise halo 10%, haze 10%.
+function dayEvent(day) {
+  if (world.getDynamicProperty(`${NS}:day_event_day`) !== day) {
     const prevNew = world.getDynamicProperty(`${NS}:night_day`) === day - 1 &&
       world.getDynamicProperty(`${NS}:night_profile`) === "new";
-    world.setDynamicProperty(`${NS}:eclipse_check_day`, day);
-    world.setDynamicProperty(`${NS}:eclipse`, prevNew && Math.random() < 0.10);
+    const r = Math.random();
+    let ev = "";
+    if (prevNew && r < 0.10) ev = "eclipse_total";
+    else if (prevNew && r < 0.20) ev = "eclipse_annular";
+    else if (!prevNew && r < 0.10) ev = "halo";
+    else if (!prevNew && r < 0.20) ev = "haze";
+    world.setDynamicProperty(`${NS}:day_event_day`, day);
+    world.setDynamicProperty(`${NS}:day_event`, ev);
   }
-  return world.getDynamicProperty(`${NS}:eclipse`) === true;
+  return String(world.getDynamicProperty(`${NS}:day_event`) ?? "");
 }
 
-// Current world state: { kind: "day" | "dusk" | "night" | "eclipse", profile }
+// Eclipse stage 0..3 around noon (5400-6600): ramp in, peak, ramp out (~1 real minute).
+function eclipseStage(t) {
+  if (t < 5400 || t >= 6600) return 0;
+  if (t < 5600 || t >= 6400) return 1;
+  if (t < 5800 || t >= 6200) return 2;
+  return 3;
+}
+
+// Current world state: { kind: "day" | "golden" | "night" | "eclipse" | "halo" | "haze", profile }
 function worldState() {
   const t = world.getTimeOfDay();
   const day = world.getDay();
   if (t >= 13000 && t < 23000) return { kind: "night", profile: nightProfile(day) };
-  if (t >= 12000) return { kind: "dusk", profile: "" };
-  if (t >= 5400 && t < 6600 && eclipseToday(day)) return { kind: "eclipse", profile: "" };
+  if (t >= 12000) return { kind: "golden", profile: "" };
+  const ev = dayEvent(day);
+  if (ev.startsWith("eclipse")) {
+    const k = eclipseStage(t);
+    if (k) return { kind: "eclipse", profile: `${ev}_${k}` };
+  }
+  if ((ev === "halo" || ev === "haze") && t >= 1000 && t < 11000) return { kind: ev, profile: "" };
   return { kind: "day", profile: "" };
 }
 
@@ -115,8 +135,8 @@ const currentFog = new Map(); // player.id -> fog id or ""
 function wantedFog(player, s, st) {
   if (!s.fog || player.dimension.id !== "minecraft:overworld") return "";
   if (st.kind === "night") return `${NS}:${DENSITIES[s.density]}_${st.profile}`;
-  if (st.kind === "dusk") return `${NS}:dusk`;
-  if (st.kind === "eclipse") return `${NS}:eclipse`;
+  if (st.kind === "eclipse") return `${NS}:${st.profile}`;
+  if (st.kind === "golden" || st.kind === "halo" || st.kind === "haze") return `${NS}:${st.kind}`;
   return "";
 }
 
@@ -130,26 +150,35 @@ function updateFog(player, s, st) {
 }
 
 // ---------- Vibrant Visuals lighting (only visible with Vibrant Visuals on) ----------
+// Darkness comes from real lighting here, so placed light sources stay visible from far away.
 const MOON_LUX = { new: 0.0001, crescent: 0.05, quarter: 0.12, gibbous: 0.25, full: 0.4, super: 0.6, micro: 0.25, blood: 0.02, honey: 0.4, loykrathong: 0.7 };
 const MOON_COLOR = { blood: { red: 0.8, green: 0.15, blue: 0.1 }, honey: { red: 1, green: 0.8, blue: 0.45 }, loykrathong: { red: 1, green: 0.85, blue: 0.65 } };
-const AMBIENT_LUX = [0.01, 0.005, 0.002, 0.0001]; // per darkness level
+const AMBIENT_LUX = [0.004, 0.001, 0.0003, 0.0001]; // per darkness level
+const MOON_SCALE = [0.8, 0.5, 0.25, 0.08];           // per darkness level
+const ECLIPSE_SUN_LUX = { eclipse_total_1: 20000, eclipse_total_2: 2000, eclipse_total_3: 20, eclipse_annular_1: 40000, eclipse_annular_2: 20000, eclipse_annular_3: 10000 };
+const SUN_MIE = { halo: 40, haze: 25 };
 let lightingKey = "";
 
+function applyLighting(l, a, s, st) {
+  l.resetAmbientIlluminance(); l.resetMoonIlluminance(); l.resetMoonColor(); l.resetSunIlluminance();
+  a.resetSunMieStrength();
+  if (st.kind === "night") {
+    l.setAmbientIlluminance(AMBIENT_LUX[s.density]);
+    l.setMoonIlluminance(Math.max(0.0001, (MOON_LUX[st.profile] ?? 0.4) * MOON_SCALE[s.density]));
+    if (MOON_COLOR[st.profile]) l.setMoonColor(MOON_COLOR[st.profile]);
+  } else if (st.kind === "eclipse") {
+    l.setSunIlluminance(ECLIPSE_SUN_LUX[st.profile] ?? 20000);
+  } else if (SUN_MIE[st.kind]) {
+    a.setSunMieStrength(SUN_MIE[st.kind]);
+  }
+}
+
 function updateLighting(s, st) {
-  const key = st.kind === "night" ? `${st.profile}_${s.density}` : "default";
+  const key = `${st.kind}_${st.profile}_${s.density}`;
   if (key === lightingKey) return;
   lightingKey = key;
   for (const biome of BiomeTypes.getAll()) {
-    try {
-      const l = getBiomeLighting(biome);
-      if (key === "default") {
-        l.resetAmbientIlluminance(); l.resetMoonIlluminance(); l.resetMoonColor();
-      } else {
-        l.setAmbientIlluminance(AMBIENT_LUX[s.density]);
-        l.setMoonIlluminance(MOON_LUX[st.profile] ?? 0.4);
-        if (MOON_COLOR[st.profile]) l.setMoonColor(MOON_COLOR[st.profile]); else l.resetMoonColor();
-      }
-    } catch (e) { /* biome without lighting data */ }
+    try { applyLighting(getBiomeLighting(biome), getBiomeAtmospherics(biome), s, st); } catch (e) { /* biome without data */ }
   }
 }
 

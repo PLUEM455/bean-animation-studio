@@ -51,3 +51,9 @@ Sun/moon toggle in the menu: not possible — no script API swaps textures at ru
 - Vibrant Visuals: `@minecraft/server-graphics` 1.0.0 `getBiomeLighting` for every biome — night ambient/moon illuminance and moon colour per profile; reset at day. Only visible with Vibrant Visuals on.
 - Held light: light blocks at head + 4 points 4 blocks away (N/S/E/W). If any of them is removed by something else, the whole group goes out until the player swaps items. `/scriptevent realdarkness:extinguish` does the same for other add-ons.
 - Textures: 32×32 gear item icon; 64×64 limb-darkened sun; 128 px per moon phase with sphere-lit terminator. True 3D sun/moon not possible (engine draws flat quads). Tides not implemented.
+
+## Revision 3 (2026-11-11)
+- Sun/moon textures merged into `RealDarkness_RP` (no separate sky pack). Transparent backgrounds; moon has no rim, unlit side see-through.
+- Sun phenomena (silent): golden hour fog at 12000–13000 and 23000–24000; per day after a new-moon night: total eclipse 10% / annular eclipse 10% (staged fog ramp 5400–6600 + VV sun illuminance); otherwise halo day 10% (milky fog + VV sun mie 40) / haze day 10% (yellow fog + VV sun mie 25) between 1000–11000.
+- Vibrant Visuals darkness scales with the darkness level (ambient and moon illuminance). With fog off + VV on, darkness comes from lighting, so placed lights stay visible far away. Not achievable in the normal renderer (fog is distance-only).
+- Packs bumped to 1.2.0.

@@ -2,19 +2,19 @@
   "format_version": "1.16.100",
   "minecraft:fog_settings": {
     "description": {
-      "identifier": "realdarkness:dusk"
+      "identifier": "realdarkness:eclipse_annular_3"
     },
     "distance": {
       "air": {
-        "fog_start": 16,
-        "fog_end": 72,
-        "fog_color": "#0b0c12",
+        "fog_start": 8,
+        "fog_end": 110,
+        "fog_color": "#262a33",
         "render_distance_type": "fixed"
       },
       "weather": {
-        "fog_start": 16,
-        "fog_end": 72,
-        "fog_color": "#0b0c12",
+        "fog_start": 8,
+        "fog_end": 110,
+        "fog_color": "#262a33",
         "render_distance_type": "fixed"
       }
     }
