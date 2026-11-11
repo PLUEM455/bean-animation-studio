@@ -1,13 +1,15 @@
 // Real Darkness — behavior script
-import { world, system, EquipmentSlot, PlayerPermissionLevel, BlockPermutation, MoonPhase, BiomeTypes } from "@minecraft/server";
+// Fog is fully automatic: visibility comes from sky light (sun/moon, moon phase, special
+// days/nights, how exposed the player is to the sky) and from nearby light sources
+// (distance to the nearest one and how many there are).
+import { world, system, EquipmentSlot, PlayerPermissionLevel, BlockPermutation, BlockTypes, BlockVolume, MoonPhase } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
-import { getPlayerLighting, getPlayerAtmospherics, getPlayerColorGrading } from "@minecraft/server-graphics";
 
 const NS = "realdarkness";
 const FOG_TAG = "realdarkness";
 const SETTINGS_ITEM = "realdarkness:settings";
-const DENSITIES = ["thin", "medium", "thick", "pitch"];
-
+const SCAN_RADIUS = 24;      // horizontal blocks counted as "near"
+const SCAN_HEIGHT = 12;      // vertical half-height of the scan box
 // Vanilla light levels of light-emitting items (held light uses these values).
 const LIGHT_ITEMS = {
   "minecraft:torch": 14,
@@ -34,21 +36,29 @@ const LIGHT_ITEMS = {
   "minecraft:magma": 3,
 };
 
+// Light-emitting placed blocks (all count, lava and fire included). Unknown ids are dropped at load.
+const LIGHT_BLOCKS = [
+  "minecraft:torch", "minecraft:soul_torch", "minecraft:redstone_torch", "minecraft:copper_torch",
+  "minecraft:lantern", "minecraft:soul_lantern", "minecraft:glowstone", "minecraft:sea_lantern",
+  "minecraft:shroomlight", "minecraft:lit_pumpkin", "minecraft:beacon", "minecraft:campfire",
+  "minecraft:soul_campfire", "minecraft:lava", "minecraft:flowing_lava", "minecraft:fire",
+  "minecraft:soul_fire", "minecraft:end_rod", "minecraft:ochre_froglight", "minecraft:verdant_froglight",
+  "minecraft:pearlescent_froglight", "minecraft:crying_obsidian", "minecraft:magma", "minecraft:glow_lichen",
+  "minecraft:lit_furnace", "minecraft:lit_blast_furnace", "minecraft:lit_smoker", "minecraft:lit_redstone_lamp",
+  "minecraft:respawn_anchor", "minecraft:conduit", "minecraft:sea_pickle", "minecraft:cave_vines_head_with_berries",
+  "minecraft:cave_vines_body_with_berries", "minecraft:enchanting_table", "minecraft:ender_chest",
+  "minecraft:brewing_stand", "minecraft:amethyst_cluster", "minecraft:candle", "minecraft:lit_candle",
+].filter((id) => { try { return !!BlockTypes.get(id); } catch (e) { return false; } });
+
 // ---------- settings (world-wide) ----------
 function getSettings() {
   const fog = world.getDynamicProperty(`${NS}:fog`);
-  const density = world.getDynamicProperty(`${NS}:density`);
   const held = world.getDynamicProperty(`${NS}:held_light`);
-  return {
-    fog: fog === undefined ? true : !!fog,
-    density: typeof density === "number" && DENSITIES[density] ? density : 1,
-    heldLight: held === undefined ? true : !!held,
-  };
+  return { fog: fog === undefined ? true : !!fog, heldLight: held === undefined ? true : !!held };
 }
 
 function saveSettings(s) {
   world.setDynamicProperty(`${NS}:fog`, s.fog);
-  world.setDynamicProperty(`${NS}:density`, s.density);
   world.setDynamicProperty(`${NS}:held_light`, s.heldLight);
 }
 
@@ -129,80 +139,93 @@ function worldState() {
   return { kind: "day", profile: "" };
 }
 
-// ---------- fog ----------
-const currentFog = new Map(); // player.id -> fog id or ""
+// ---------- automatic fog ----------
+// Brightness of the sky (sun/moon) for the current state, 0..1.
+const NIGHT_SKY = { new: 0.0, crescent: 0.08, quarter: 0.16, gibbous: 0.24, full: 0.32, super: 0.45, micro: 0.2, blood: 0.04, honey: 0.32, loykrathong: 0.5 };
+const ECLIPSE_SKY = { eclipse_total_1: 0.6, eclipse_total_2: 0.3, eclipse_total_3: 0.02, eclipse_annular_1: 0.8, eclipse_annular_2: 0.6, eclipse_annular_3: 0.45 };
+const STATE_SKY = { day: 1.0, golden: 0.6, halo: 0.9, haze: 0.5 };
+const NIGHT_TINT = { blood: "blood", honey: "honey", loykrathong: "loykrathong" };
+const STATE_TINT = { golden: "golden", halo: "halo", haze: "haze", eclipse: "eclipse" };
 
-function wantedFog(player, s, st) {
-  if (!s.fog || player.dimension.id !== "minecraft:overworld") return "";
-  if (st.kind === "night") return `${NS}:${DENSITIES[s.density]}_${st.profile}`;
-  if (st.kind === "eclipse") return `${NS}:${st.profile}`;
-  if (st.kind === "golden" || st.kind === "halo" || st.kind === "haze") return `${NS}:${st.kind}`;
-  return "";
+// Fog end distances (must match tools/make_fogs.py). Last step = no fog.
+const FOG_STEPS = [6, 8, 10, 13, 16, 20, 25, 32, 40, 50, 64, 80, 96];
+const NO_FOG = FOG_STEPS.length;
+
+function skyBrightness(st) {
+  if (st.kind === "night") return NIGHT_SKY[st.profile] ?? 0.3;
+  if (st.kind === "eclipse") return ECLIPSE_SKY[st.profile] ?? 0.5;
+  return STATE_SKY[st.kind] ?? 1.0;
 }
 
+// Light sources near the player: nearest distance and count (held items of all players count too).
+function nearbyLights(player) {
+  const loc = player.location;
+  let nearest = Infinity;
+  let count = 0;
+  const from = { x: Math.floor(loc.x) - SCAN_RADIUS, y: Math.floor(loc.y) - SCAN_HEIGHT, z: Math.floor(loc.z) - SCAN_RADIUS };
+  const to = { x: Math.floor(loc.x) + SCAN_RADIUS, y: Math.floor(loc.y) + SCAN_HEIGHT, z: Math.floor(loc.z) + SCAN_RADIUS };
+  try {
+    const list = player.dimension.getBlocks(new BlockVolume(from, to), { includeTypes: LIGHT_BLOCKS });
+    for (const p of list.getBlockLocationIterator()) {
+      const d = Math.hypot(p.x + 0.5 - loc.x, p.y + 0.5 - loc.y, p.z + 0.5 - loc.z);
+      if (d <= SCAN_RADIUS) { count++; if (d < nearest) nearest = d; }
+    }
+  } catch (e) { /* unloaded area */ }
+  for (const other of world.getAllPlayers()) {
+    if (other.dimension.id !== player.dimension.id || heldItem(other).level <= 0) continue;
+    const d = other.id === player.id ? 0 : Math.hypot(other.location.x - loc.x, other.location.y - loc.y, other.location.z - loc.z);
+    if (d <= SCAN_RADIUS) { count++; if (d < nearest) nearest = d; }
+  }
+  return { nearest, count };
+}
+
+// Target fog step for a player (0 = narrowest, NO_FOG = clear).
+function targetStep(player, st) {
+  let sky = 0;
+  try { sky = player.dimension.getSkyLightLevel(player.getHeadLocation()); } catch (e) { /* out of world */ }
+  const skyVis = skyBrightness(st) * Math.min(1, sky / 12);
+  const { nearest, count } = nearbyLights(player);
+  const closeness = nearest === Infinity ? 0 : Math.max(0, 1 - nearest / SCAN_RADIUS);
+  const amount = Math.min(1, count / 8);
+  const lightVis = closeness * (0.45 + 0.55 * amount);
+  const vis = 1 - (1 - skyVis) * (1 - lightVis);
+  if (vis >= 0.97) return NO_FOG;
+  return Math.min(NO_FOG - 1, Math.round(vis * (NO_FOG - 1)));
+}
+
+function fogTint(st, player) {
+  let sky = 0;
+  try { sky = player.dimension.getSkyLightLevel(player.getHeadLocation()); } catch (e) { /* ignore */ }
+  if (sky < 5) return "black"; // caves: plain darkness
+  if (st.kind === "night") return NIGHT_TINT[st.profile] ?? "black";
+  return STATE_TINT[st.kind] ?? "black";
+}
+
+const fogState = new Map(); // player.id -> { step, id }
+
 function updateFog(player, s, st) {
-  const want = wantedFog(player, s, st);
-  // Only skip when we already synced this player; after a reset we must clear old fog.
-  if (currentFog.has(player.id) && currentFog.get(player.id) === want) return;
+  const prev = fogState.get(player.id);
+  let want = "";
+  let step = NO_FOG;
+  if (s.fog && player.dimension.id === "minecraft:overworld") {
+    const target = targetStep(player, st);
+    step = prev ? prev.step + Math.sign(target - prev.step) : target; // move one step per update
+    if (step < NO_FOG) want = `${NS}:${fogTint(st, player)}_${step}`;
+  }
+  if (prev && prev.id === want) { prev.step = step; return; }
   const fs = player.fogSettings;
   while (fs.getTags().includes(FOG_TAG)) fs.pop(FOG_TAG);
   if (want) fs.push(want, FOG_TAG);
-  currentFog.set(player.id, want);
+  fogState.set(player.id, { step, id: want });
 }
 
-// ---------- Vibrant Visuals lighting (only visible with Vibrant Visuals on) ----------
-// Darkness comes from real lighting here, so placed light sources stay visible from far away.
-const MOON_LUX = { new: 0.0001, crescent: 0.05, quarter: 0.12, gibbous: 0.25, full: 0.4, super: 0.6, micro: 0.25, blood: 0.02, honey: 0.4, loykrathong: 0.7 };
-const MOON_COLOR = { blood: { red: 0.8, green: 0.15, blue: 0.1 }, honey: { red: 1, green: 0.8, blue: 0.45 }, loykrathong: { red: 1, green: 0.85, blue: 0.65 } };
-const AMBIENT_LUX = [0.004, 0.001, 0.0003, 0.0001]; // per darkness level
-const MOON_SCALE = [0.8, 0.5, 0.25, 0.08];           // per darkness level
-const ECLIPSE_SUN_LUX = { eclipse_total_1: 20000, eclipse_total_2: 2000, eclipse_total_3: 20, eclipse_annular_1: 40000, eclipse_annular_2: 20000, eclipse_annular_3: 10000 };
-const SUN_MIE = { halo: 40, haze: 25 };
-// Night colour grading: darken shadows/midtones only, highlights (light sources) untouched.
-const NIGHT_GAIN = [0.6, 0.4, 0.2, 0.08]; // per darkness level
-const lightingKeys = new Map(); // player.id -> applied key
-let lightingKey = "";
-
-// Each call guarded on its own so one unsupported value cannot block the others.
-function safe(fn) { try { fn(); } catch (e) { /* not supported for this biome */ } }
-
-function applyLighting(l, a, g, s, st) {
-  safe(() => l.resetAmbientIlluminance()); safe(() => l.resetMoonIlluminance());
-  safe(() => l.resetMoonColor()); safe(() => l.resetSunIlluminance()); safe(() => a.resetSunMieStrength());
-  safe(() => g.resetShadowsGain()); safe(() => g.resetMidtonesGain());
-  if (st.kind === "night") {
-    safe(() => l.setAmbientIlluminance(AMBIENT_LUX[s.density]));
-    safe(() => l.setMoonIlluminance(Math.max(0.0001, (MOON_LUX[st.profile] ?? 0.4) * MOON_SCALE[s.density])));
-    if (MOON_COLOR[st.profile]) safe(() => l.setMoonColor(MOON_COLOR[st.profile]));
-    const k = NIGHT_GAIN[s.density];
-    safe(() => g.setShadowsGain({ x: k, y: k, z: k }));
-    safe(() => g.setMidtonesGain({ x: k * 1.5, y: k * 1.5, z: k * 1.5 }));
-  } else if (st.kind === "eclipse") {
-    safe(() => l.setSunIlluminance(ECLIPSE_SUN_LUX[st.profile] ?? 20000));
-  } else if (SUN_MIE[st.kind]) {
-    safe(() => a.setSunMieStrength(SUN_MIE[st.kind]));
-  }
-}
-
-// Per-player controls take precedence over biome/resource-pack values.
-function updateLighting(player, s, st) {
-  const key = `${st.kind}_${st.profile}_${s.density}`;
-  lightingKey = key;
-  if (lightingKeys.get(player.id) === key) return;
-  lightingKeys.set(player.id, key);
-  for (const biome of BiomeTypes.getAll()) {
-    let l, a, g;
-    try { l = getPlayerLighting(biome, player); a = getPlayerAtmospherics(biome, player); g = getPlayerColorGrading(biome, player); } catch (e) { continue; }
-    applyLighting(l, a, g, s, st);
-  }
-}
-
+let lastState = { kind: "day", profile: "" };
 system.runInterval(() => {
   const s = getSettings();
   const st = worldState();
+  lastState = st;
   for (const player of world.getAllPlayers()) {
     try { updateFog(player, s, st); } catch (e) { /* player not ready */ }
-    try { updateLighting(player, s, st); } catch (e) { /* player not ready */ }
   }
 }, 20);
 
@@ -296,9 +319,14 @@ system.afterEvents.scriptEventReceive.subscribe(({ id, sourceEntity }) => {
     const s = getSettings();
     const st = worldState();
     const p = sourceEntity?.typeId === "minecraft:player" ? /** @type {import("@minecraft/server").Player} */ (sourceEntity) : undefined;
+    let extra = "";
+    if (p) {
+      const { nearest, count } = nearbyLights(p);
+      extra = ` sky=${p.dimension.getSkyLightLevel(p.getHeadLocation())} lights=${count} nearest=${nearest === Infinity ? "-" : nearest.toFixed(1)}` +
+        ` step=${fogState.get(p.id)?.step ?? "-"} fogStack=[${p.fogSettings.getStack().join(", ")}]`;
+    }
     const msg = `[RealDarkness] time=${world.getTimeOfDay()} day=${world.getDay()} state=${st.kind} ${st.profile} ` +
-      `fog=${s.fog} level=${DENSITIES[s.density]} heldLight=${s.heldLight} lighting=${lightingKey}` +
-      (p ? ` fogStack=[${p.fogSettings.getStack().join(", ")}]` : "");
+      `fog=${s.fog} heldLight=${s.heldLight}` + extra;
     if (p) p.sendMessage(msg); else world.sendMessage(msg);
     return;
   }
@@ -310,14 +338,13 @@ system.afterEvents.scriptEventReceive.subscribe(({ id, sourceEntity }) => {
 world.afterEvents.playerLeave.subscribe(({ playerId }) => {
   removeGroup(playerId);
   extinguished.delete(playerId);
-  currentFog.delete(playerId);
-  lightingKeys.delete(playerId);
+  fogState.delete(playerId);
 });
 
 // ---------- settings item ----------
 world.afterEvents.playerSpawn.subscribe(({ player, initialSpawn }) => {
   if (!initialSpawn) return;
-  currentFog.delete(player.id);
+  fogState.delete(player.id);
   if (player.getDynamicProperty(`${NS}:got_item`)) return;
   system.run(() => {
     player.runCommand(`give @s ${SETTINGS_ITEM} 1`);
@@ -335,19 +362,13 @@ world.afterEvents.itemUse.subscribe(({ source: player, itemStack }) => {
   new ModalFormData()
     .title({ translate: "realdarkness.form.title" })
     .toggle({ translate: "realdarkness.form.fog" }, { defaultValue: s.fog })
-    .dropdown(
-      { translate: "realdarkness.form.density" },
-      DENSITIES.map((d) => ({ translate: `realdarkness.form.density.${d}` })),
-      { defaultValueIndex: s.density }
-    )
     .toggle({ translate: "realdarkness.form.held_light" }, { defaultValue: s.heldLight })
     .show(player)
     .then((res) => {
       if (res.canceled || !res.formValues) return;
-      const [fog, density, heldLight] = res.formValues;
-      saveSettings({ fog: !!fog, density: Number(density), heldLight: !!heldLight });
-      currentFog.clear(); // re-apply fog for everyone
-      lightingKeys.clear(); // re-apply lighting
+      const [fog, heldLight] = res.formValues;
+      saveSettings({ fog: !!fog, heldLight: !!heldLight });
+      fogState.clear(); // re-apply fog for everyone
       player.sendMessage({ translate: "realdarkness.msg.saved" });
     });
 });
