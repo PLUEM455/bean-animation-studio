@@ -1,0 +1,17 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Cave Echo Sounds (Resources)",
+    "description": "ปิดเสียงร้องเดิมของ mob ให้สคริปต์เล่นแทนพร้อมเสียงก้อง",
+    "uuid": "6c8c1e54-5b29-408c-af60-c37664a35e49",
+    "version": [1, 2, 0],
+    "min_engine_version": [1, 26, 60]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "4709f90e-780c-48ae-b0e2-a1946edc064c",
+      "version": [1, 2, 0]
+    }
+  ]
+}
