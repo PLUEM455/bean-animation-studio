@@ -2,9 +2,9 @@
   "format_version": 2,
   "header": {
     "name": "Cave Echo Sounds",
-    "description": "เสียงก้องในถ้ำ: ขุด ตัดไม้ โดนตี จุดไฟ",
+    "description": "เสียงก้องตามขนาดพื้นที่ทั่วโลก: ขุด ตัดไม้ โดนตี จุดไฟ",
     "uuid": "57a6c15e-1826-41e2-83fe-1dfd63c2ec35",
-    "version": [1, 0, 0],
+    "version": [1, 1, 0],
     "min_engine_version": [1, 26, 60]
   },
   "modules": [
@@ -13,7 +13,7 @@
       "language": "javascript",
       "entry": "scripts/main.js",
       "uuid": "5739e733-5dde-4395-889b-dd6f0db9a7bc",
-      "version": [1, 0, 0]
+      "version": [1, 1, 0]
     }
   ],
   "dependencies": [

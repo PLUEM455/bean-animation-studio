@@ -1,48 +1,111 @@
 import { world, system } from "@minecraft/server";
 
 // ---- ตั้งค่า ----
-const SCAN_HEIGHT = 32; // สแกนขึ้นไปกี่บล็อก
-const MIN_SOLID_ABOVE = 4; // ต้องมีบล็อกทึบเหนือหัวอย่างน้อยกี่บล็อกถึงนับว่า "ในถ้ำ"
-// เสียงสะท้อน: [หน่วงกี่ tick, ความดัง, pitch]  (20 tick = 1 วินาที)
-const ECHO_TAPS = [
-  [4, 0.45, 0.95],
-  [9, 0.25, 0.9],
-  [15, 0.12, 0.85],
-];
+const PROBE_INTERVAL = 10; // วัดพื้นที่รอบผู้เล่นทุกกี่ tick
+const PROBE_RANGE = 48; // ระยะยิง ray สูงสุด (บล็อก)
+const SMOOTHING = 0.35; // 0-1 ยิ่งน้อยยิ่งเปลี่ยนช้า/นิ่ง
+const HEAR_RANGE = 32; // ผู้เล่นในระยะนี้จะได้ยินเสียงก้อง
+const MIN_GAP_TICKS = 3; // กันเสียงก้องเดียวกันซ้อนถี่เกินไป
+const MAX_CHAINS = 6; // จำนวนเสียงก้องที่เล่นพร้อมกันได้ต่อผู้เล่น
 
-// ตรวจว่าตำแหน่งนี้อยู่ในถ้ำไหม (นับบล็อกทึบในแนวตั้งเหนือตำแหน่ง)
-function isInCave(dimension, location) {
-  const x = Math.floor(location.x);
-  const z = Math.floor(location.z);
-  const startY = Math.floor(location.y) + 2;
-  let solid = 0;
-  for (let y = startY; y < startY + SCAN_HEIGHT; y++) {
-    let block;
-    try {
-      block = dimension.getBlock({ x, y, z });
-    } catch {
-      return false; // นอกขอบเขตโลก / chunk ไม่โหลด
-    }
-    if (!block) return false;
-    if (!block.isAir && !block.isLiquid) {
-      solid++;
-      if (solid >= MIN_SOLID_ABOVE) return true;
-    }
-  }
-  return false;
+// 14 ทิศ: 6 แกน + 8 แนวทแยง
+const DIRS = [];
+for (const [x, y, z] of [
+  [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+  [1, 1, 1], [1, 1, -1], [-1, 1, 1], [-1, 1, -1],
+  [1, -1, 1], [1, -1, -1], [-1, -1, 1], [-1, -1, -1],
+]) {
+  const l = Math.hypot(x, y, z);
+  DIRS.push({ x: x / l, y: y / l, z: z / l });
 }
 
-// เล่นเสียงซ้ำแบบหน่วงเวลาและเบาลงเรื่อย ๆ = เสียงก้อง
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+// ยิง ray รอบตัว แล้วคืน { enclosure: 0-1 (ปิดล้อมแค่ไหน), size: ระยะเฉลี่ยถึงผนัง }
+function probeSpace(dimension, origin) {
+  let hits = 0;
+  let total = 0;
+  for (const dir of DIRS) {
+    let dist = PROBE_RANGE;
+    try {
+      const hit = dimension.getBlockFromRay(origin, dir, {
+        maxDistance: PROBE_RANGE,
+        includeLiquidBlocks: false,
+        includePassableBlocks: false,
+      });
+      if (hit) {
+        const b = hit.block.location;
+        dist = Math.hypot(b.x + 0.5 - origin.x, b.y + 0.5 - origin.y, b.z + 0.5 - origin.z);
+        hits++;
+      }
+    } catch {
+      // นอกขอบเขตโลก นับเป็นที่โล่ง
+    }
+    total += dist;
+  }
+  return { enclosure: hits / DIRS.length, size: total / DIRS.length };
+}
+
+// เก็บค่าพื้นที่ของผู้เล่นแต่ละคนแบบค่อย ๆ เปลี่ยน (ไม่กระโดด) = เสียงนิ่ง
+const profiles = new Map(); // player.id -> { enclosure, size, active, lastPlay: Map }
+
+system.runInterval(() => {
+  for (const player of world.getAllPlayers()) {
+    if (!player.isValid) continue;
+    const m = probeSpace(player.dimension, player.getHeadLocation());
+    const p = profiles.get(player.id);
+    if (!p) {
+      profiles.set(player.id, { ...m, active: 0, lastPlay: new Map() });
+    } else {
+      p.enclosure += (m.enclosure - p.enclosure) * SMOOTHING;
+      p.size += (m.size - p.size) * SMOOTHING;
+    }
+  }
+}, PROBE_INTERVAL);
+
+world.afterEvents.playerLeave.subscribe((ev) => profiles.delete(ev.playerId));
+
+// แปลงค่าพื้นที่เป็นเสียงก้อง
+// ห้องเล็ก: ก้องสั้น เบา แหลม / ถ้ำใหญ่: ก้องยาว ดัง ทุ้ม / ที่โล่ง: แทบไม่ก้อง
+function echoTaps(p) {
+  const sizeF = clamp((p.size - 2) / 22, 0, 1); // 0 = แคบ, 1 = กว้างมาก
+  const wet = Math.pow(p.enclosure, 1.5) * (0.25 + 0.75 * sizeF);
+  if (wet < 0.05) return [];
+  const count = 1 + Math.round(4 * p.enclosure * sizeF); // 1-5 ครั้ง
+  const gap = Math.round(1 + 7 * sizeF); // 1-8 tick ระหว่างแต่ละครั้ง
+  const decay = 0.45 + 0.35 * sizeF;
+  const pitch = 1.1 - 0.3 * sizeF;
+  const taps = [];
+  let vol = 0.6 * wet;
+  for (let i = 0; i < count; i++) {
+    taps.push({ delay: gap * (i + 1), volume: vol, pitch: clamp(pitch - 0.02 * i, 0.5, 1.5) });
+    vol *= decay;
+  }
+  return taps;
+}
+
+// เล่นเสียงก้องให้ผู้เล่นแต่ละคนตามพื้นที่ที่คนนั้นยืนอยู่
 function playEcho(dimension, soundId, location) {
   const loc = { x: location.x, y: location.y, z: location.z };
-  for (const [delay, volume, pitch] of ECHO_TAPS) {
-    system.runTimeout(() => {
-      try {
-        dimension.playSound(soundId, loc, { volume, pitch });
-      } catch {
-        // dimension/sound ใช้ไม่ได้แล้ว ข้ามไป
-      }
-    }, delay);
+  const now = system.currentTick;
+  for (const player of dimension.getPlayers({ location: loc, maxDistance: HEAR_RANGE })) {
+    const p = profiles.get(player.id);
+    if (!p || p.active >= MAX_CHAINS) continue;
+    if (now - (p.lastPlay.get(soundId) ?? -99) < MIN_GAP_TICKS) continue;
+    const taps = echoTaps(p);
+    if (taps.length === 0) continue;
+    p.lastPlay.set(soundId, now);
+    p.active++;
+    taps.forEach((t, i) => {
+      system.runTimeout(() => {
+        try {
+          if (player.isValid) player.playSound(soundId, { location: loc, volume: t.volume, pitch: t.pitch });
+        } catch {
+          // ผู้เล่นออก/เปลี่ยนมิติ
+        }
+        if (i === taps.length - 1) p.active--;
+      }, t.delay);
+    });
   }
 }
 
@@ -83,7 +146,6 @@ function hurtSoundFor(entity) {
 // 1) ขุดหิน / ตัดไม้ / ทุบบล็อก
 world.afterEvents.playerBreakBlock.subscribe((ev) => {
   const { dimension, location } = ev.block;
-  if (!isInCave(dimension, location)) return;
   playEcho(dimension, digSoundFor(ev.brokenBlockPermutation.type.id), location);
 });
 
@@ -92,7 +154,6 @@ world.afterEvents.entityHurt.subscribe((ev) => {
   const entity = ev.hurtEntity;
   if (!entity.isValid) return;
   const { dimension, location } = entity;
-  if (!isInCave(dimension, location)) return;
   playEcho(dimension, "game.player.attack.strong", location);
   const hurt = hurtSoundFor(entity);
   if (hurt) playEcho(dimension, hurt, location);
@@ -104,6 +165,5 @@ world.afterEvents.playerInteractWithBlock.subscribe((ev) => {
   const item = ev.itemStack.typeId;
   if (item !== "minecraft:flint_and_steel" && item !== "minecraft:fire_charge") return;
   const { dimension, location } = ev.block;
-  if (!isInCave(dimension, location)) return;
   playEcho(dimension, "fire.ignite", location);
 });
