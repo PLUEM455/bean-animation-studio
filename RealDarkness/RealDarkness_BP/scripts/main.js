@@ -142,7 +142,8 @@ function wantedFog(player, s, st) {
 
 function updateFog(player, s, st) {
   const want = wantedFog(player, s, st);
-  if ((currentFog.get(player.id) ?? "") === want) return;
+  // Only skip when we already synced this player; after a reset we must clear old fog.
+  if (currentFog.has(player.id) && currentFog.get(player.id) === want) return;
   const fs = player.fogSettings;
   while (fs.getTags().includes(FOG_TAG)) fs.pop(FOG_TAG);
   if (want) fs.push(want, FOG_TAG);
@@ -159,17 +160,20 @@ const ECLIPSE_SUN_LUX = { eclipse_total_1: 20000, eclipse_total_2: 2000, eclipse
 const SUN_MIE = { halo: 40, haze: 25 };
 let lightingKey = "";
 
+// Each call guarded on its own so one unsupported value cannot block the others.
+function safe(fn) { try { fn(); } catch (e) { /* not supported for this biome */ } }
+
 function applyLighting(l, a, s, st) {
-  l.resetAmbientIlluminance(); l.resetMoonIlluminance(); l.resetMoonColor(); l.resetSunIlluminance();
-  a.resetSunMieStrength();
+  safe(() => l.resetAmbientIlluminance()); safe(() => l.resetMoonIlluminance());
+  safe(() => l.resetMoonColor()); safe(() => l.resetSunIlluminance()); safe(() => a.resetSunMieStrength());
   if (st.kind === "night") {
-    l.setAmbientIlluminance(AMBIENT_LUX[s.density]);
-    l.setMoonIlluminance(Math.max(0.0001, (MOON_LUX[st.profile] ?? 0.4) * MOON_SCALE[s.density]));
-    if (MOON_COLOR[st.profile]) l.setMoonColor(MOON_COLOR[st.profile]);
+    safe(() => l.setAmbientIlluminance(AMBIENT_LUX[s.density]));
+    safe(() => l.setMoonIlluminance(Math.max(0.0001, (MOON_LUX[st.profile] ?? 0.4) * MOON_SCALE[s.density])));
+    if (MOON_COLOR[st.profile]) safe(() => l.setMoonColor(MOON_COLOR[st.profile]));
   } else if (st.kind === "eclipse") {
-    l.setSunIlluminance(ECLIPSE_SUN_LUX[st.profile] ?? 20000);
+    safe(() => l.setSunIlluminance(ECLIPSE_SUN_LUX[st.profile] ?? 20000));
   } else if (SUN_MIE[st.kind]) {
-    a.setSunMieStrength(SUN_MIE[st.kind]);
+    safe(() => a.setSunMieStrength(SUN_MIE[st.kind]));
   }
 }
 
@@ -178,7 +182,9 @@ function updateLighting(s, st) {
   if (key === lightingKey) return;
   lightingKey = key;
   for (const biome of BiomeTypes.getAll()) {
-    try { applyLighting(getBiomeLighting(biome), getBiomeAtmospherics(biome), s, st); } catch (e) { /* biome without data */ }
+    let l, a;
+    try { l = getBiomeLighting(biome); a = getBiomeAtmospherics(biome); } catch (e) { continue; }
+    applyLighting(l, a, s, st);
   }
 }
 
@@ -276,6 +282,17 @@ system.runInterval(() => {
 // Other add-ons can put the held light out: /scriptevent realdarkness:extinguish
 // (run as / targeting a player, or from the console to affect everyone).
 system.afterEvents.scriptEventReceive.subscribe(({ id, sourceEntity }) => {
+  if (id === `${NS}:debug`) {
+    // /scriptevent realdarkness:debug — prints what the add-on is doing right now
+    const s = getSettings();
+    const st = worldState();
+    const p = sourceEntity?.typeId === "minecraft:player" ? /** @type {import("@minecraft/server").Player} */ (sourceEntity) : undefined;
+    const msg = `[RealDarkness] time=${world.getTimeOfDay()} day=${world.getDay()} state=${st.kind} ${st.profile} ` +
+      `fog=${s.fog} level=${DENSITIES[s.density]} heldLight=${s.heldLight} lighting=${lightingKey}` +
+      (p ? ` fogStack=[${p.fogSettings.getStack().join(", ")}]` : "");
+    if (p) p.sendMessage(msg); else world.sendMessage(msg);
+    return;
+  }
   if (id !== `${NS}:extinguish`) return;
   const targets = sourceEntity?.typeId === "minecraft:player" ? [sourceEntity] : world.getAllPlayers();
   for (const p of targets) extinguish(/** @type {import("@minecraft/server").Player} */ (p));
