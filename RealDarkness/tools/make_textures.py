@@ -7,78 +7,120 @@ ROOT = __file__.rsplit("/tools/", 1)[0]
 def clamp(v):
     return max(0, min(255, int(v)))
 
+def noise(x, y, seed):
+    # deterministic value noise (no external deps)
+    def h(ix, iy):
+        n = (ix * 374761393 + iy * 668265263 + seed * 2147483647) & 0xFFFFFFFF
+        n = (n ^ (n >> 13)) * 1274126177 & 0xFFFFFFFF
+        return ((n ^ (n >> 16)) & 0xFFFF) / 65535.0
+    ix, iy = math.floor(x), math.floor(y)
+    fx, fy = x - ix, y - iy
+    sx, sy = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy)
+    a = h(ix, iy) + (h(ix + 1, iy) - h(ix, iy)) * sx
+    b = h(ix, iy + 1) + (h(ix + 1, iy + 1) - h(ix, iy + 1)) * sx
+    return a + (b - a) * sy
+
+def fbm(x, y, seed, octaves=4):
+    v, amp, f = 0.0, 0.5, 1.0
+    for i in range(octaves):
+        v += amp * noise(x * f, y * f, seed + i)
+        amp *= 0.5; f *= 2
+    return v
+
 def sun():
-    # Sky textures are drawn additively: black = transparent.
-    n = 32
+    # 64x64, drawn additively (black = transparent): limb-darkened disc, granulation, corona.
+    n = 64
     img = Image.new("RGB", (n, n))
-    c = (n - 1) / 2
+    c, r = (n - 1) / 2, 13.0
     for y in range(n):
         for x in range(n):
             d = math.hypot(x - c, y - c)
-            if d <= 6:  # bright core
-                col = (255, 252, 230)
-            elif d <= 8:
-                col = (255, 236, 160)
-            else:  # soft glow
-                g = max(0.0, 1 - (d - 8) / 8) ** 2
-                col = (clamp(255 * g), clamp(200 * g), clamp(90 * g))
+            if d <= r:
+                mu = math.sqrt(max(0.0, 1 - (d / r) ** 2))
+                limb = 0.55 + 0.45 * mu  # limb darkening
+                g = 0.92 + 0.08 * fbm(x / 3, y / 3, 7)
+                k = limb * g
+                col = (clamp(255 * min(1, k * 1.08)), clamp(244 * k), clamp(205 * k * k))
+            else:
+                t = (d - r) / (c - r)
+                ray = 0.75 + 0.25 * noise(math.atan2(y - c, x - c) * 6, 0, 3)
+                g = 0.6 * max(0.0, 1 - t) ** 3 * ray
+                col = (clamp(255 * g), clamp(190 * g), clamp(95 * g * g))
             img.putpixel((x, y), col)
     img.save(f"{ROOT}/RealDarkness_Sky_RP/textures/environment/sun.png")
 
+def moon_surface(u, v):
+    # u, v in [-1, 1] on the disc; returns albedo 0..1 (maria dark, highlands bright, craters)
+    a = 0.78 + 0.18 * fbm(u * 4 + 10, v * 4 + 10, 11)
+    maria = fbm(u * 1.6 + 3, v * 1.6 + 5, 21, 3)
+    if maria > 0.55:
+        a -= min(0.28, (maria - 0.55) * 1.6)
+    for cx, cy, cr in [(-0.35, 0.55, 0.12), (0.3, -0.25, 0.08), (0.55, 0.35, 0.06), (-0.5, -0.4, 0.07), (0.1, 0.7, 0.05)]:
+        dd = math.hypot(u - cx, v - cy) / cr
+        if dd < 1:
+            a -= 0.12 * (1 - dd)
+        elif dd < 1.3:
+            a += 0.08 * (1.3 - dd) / 0.3  # bright rim
+    return max(0.0, min(1.0, a))
+
 def moon():
-    # 4x2 grid of 32x32 phases: full, waning gibbous, last quarter, waning crescent,
-    # new, waxing crescent, first quarter, waxing gibbous.
-    n, r = 32, 9
+    # 4x2 grid of 128x128 phases: full, waning gibbous, last quarter, waning crescent,
+    # new, waxing crescent, first quarter, waxing gibbous. Sphere-lit terminator.
+    n, r = 128, 40.0
     img = Image.new("RGB", (n * 4, n * 2))
-    # shadow offset per phase (fraction of 2r); sign = side of shadow
-    offsets = [None, -1.4, -1.0, -0.5, 0.0, 0.5, 1.0, 1.4]
-    craters = [(-3, -2, 2.2), (3, 2, 1.8), (1, -4, 1.3), (-2, 4, 1.5)]
-    for i, off in enumerate(offsets):
+    # angle of the sun direction around the moon (0 = full, pi = new); sign = lit side
+    phases = [0.0, -0.25, -0.5, -0.75, 1.0, 0.75, 0.5, 0.25]
+    for i, ph in enumerate(phases):
         ox, oy = (i % 4) * n, (i // 4) * n
+        ang = ph * math.pi
+        lx, lz = math.sin(ang), math.cos(ang)  # light dir in (x, toward-viewer)
         c = (n - 1) / 2
         for y in range(n):
             for x in range(n):
-                dx, dy = x - c, y - c
-                d = math.hypot(dx, dy)
+                u, v = (x - c) / r, (y - c) / r
+                d2 = u * u + v * v
                 col = (0, 0, 0)
-                if d <= r:
-                    lit = True
-                    if off is not None:
-                        if off == 0.0:
-                            lit = False
-                        else:
-                            sx = -math.copysign(1, off) * abs(off) * r
-                            lit = math.hypot(dx - sx, dy) > r
-                    if lit:
-                        b = 235 - 25 * (d / r)
-                        for cx, cy, cr in craters:
-                            if math.hypot(dx - cx, dy - cy) <= cr:
-                                b -= 45
-                        col = (clamp(b * 0.92), clamp(b * 0.95), clamp(b))
-                    else:
-                        col = (10, 11, 16)  # faint earthshine
-                elif d <= r + 4:
-                    g = (1 - (d - r) / 4) ** 2 * (0.0 if off == 0.0 else 1.0)
-                    col = (clamp(70 * g), clamp(80 * g), clamp(110 * g))
+                if d2 <= 1:
+                    z = math.sqrt(1 - d2)
+                    lam = u * lx + z * lz
+                    lit = max(0.0, min(1.0, lam * 3 + 0.15))  # soft terminator
+                    alb = moon_surface(u, v)
+                    b = alb * (0.35 + 0.65 * lit) * lit + 0.035 * (1 - lit)  # earthshine
+                    col = (clamp(250 * b), clamp(248 * b), clamp(240 * b + 6 * (1 - lit)))
+                else:
+                    dd = math.sqrt(d2) - 1
+                    if dd < 0.25 and ph not in (1.0,):
+                        g = (1 - dd / 0.25) ** 2 * (1 - abs(ph)) * 0.35
+                        col = (clamp(120 * g), clamp(130 * g), clamp(160 * g))
                 img.putpixel((ox + x, oy + y), col)
     img.save(f"{ROOT}/RealDarkness_Sky_RP/textures/environment/moon_phases.png")
 
 def settings_icon():
-    # 16x16: iron frame with a coal-dark lantern glow in the middle.
-    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    iron, dark, shade = (216, 216, 216, 255), (40, 40, 46, 255), (150, 150, 158, 255)
-    for y in range(2, 14):
-        for x in range(2, 14):
-            edge = x in (2, 13) or y in (2, 13)
-            img.putpixel((x, y), iron if edge else dark)
-    for x in range(3, 13):
-        img.putpixel((x, 12), shade)
-    for y in range(5, 11):
-        for x in range(5, 11):
-            d = math.hypot(x - 7.5, y - 7.5)
-            if d <= 2.6:
-                g = 1 - d / 2.6
-                img.putpixel((x, y), (255, clamp(150 + 100 * g), clamp(40 + 80 * g), 255))
+    # 32x32 gear: iron body, darker inner ring, bevel light from top-left, coal-glow hub.
+    n = 32
+    img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    c = (n - 1) / 2
+    teeth, r_out, r_in, r_hole = 8, 14.5, 11.0, 4.0
+    for y in range(n):
+        for x in range(n):
+            dx, dy = x - c, y - c
+            d = math.hypot(dx, dy)
+            a = math.atan2(dy, dx)
+            tooth = (math.cos(a * teeth) > 0.25)
+            edge = r_out if tooth else r_in
+            if d > edge or d < r_hole - 0.5:
+                if d < r_hole - 0.5:  # glowing hub
+                    g = 1 - d / r_hole
+                    img.putpixel((x, y), (255, clamp(140 + 110 * g), clamp(30 + 90 * g), 255))
+                continue
+            shade = 0.5 - 0.5 * ((dx + dy) / (d + 1e-6)) * 0.6  # light from top-left
+            base = 205 + 40 * (0.5 - shade)
+            if edge - d < 1.2 or d - r_hole < 1.2:
+                base -= 70  # outline
+            elif 6.5 < d < 8.0:
+                base -= 35  # inner ring groove
+            g = clamp(base)
+            img.putpixel((x, y), (g, g, clamp(g + 8), 255))
     img.save(f"{ROOT}/RealDarkness_RP/textures/items/realdarkness_settings.png")
 
 def pack_icon(path, moon_icon):

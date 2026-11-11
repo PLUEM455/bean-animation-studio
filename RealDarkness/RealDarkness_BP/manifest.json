@@ -47,6 +47,10 @@
       "version": "2.3.0"
     },
     {
+      "module_name": "@minecraft/server-graphics",
+      "version": "1.0.0"
+    },
+    {
       "uuid": "327626e9-b9bc-4463-a491-8c377a9fc0a4",
       "version": [
         1,

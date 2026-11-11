@@ -5,6 +5,7 @@ realdarkness.form.density=ความหนาของหมอก
 realdarkness.form.density.thin=บาง
 realdarkness.form.density.medium=กลาง
 realdarkness.form.density.thick=หนา
+realdarkness.form.density.pitch=มืดสนิท
 realdarkness.form.held_light=แสงจากไอเทมที่ถือ
 realdarkness.msg.no_permission=§cเฉพาะเจ้าของโลก (Operator) เท่านั้นที่ตั้งค่า Real Darkness ได้
 realdarkness.msg.saved=§aบันทึกการตั้งค่า Real Darkness แล้ว

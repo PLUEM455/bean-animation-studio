@@ -2,19 +2,19 @@
   "format_version": "1.16.100",
   "minecraft:fog_settings": {
     "description": {
-      "identifier": "realdarkness:night_medium"
+      "identifier": "realdarkness:thick_loykrathong"
     },
     "distance": {
       "air": {
-        "fog_start": 4,
-        "fog_end": 32,
-        "fog_color": "#000000",
+        "fog_start": 0.0,
+        "fog_end": 28.0,
+        "fog_color": "#160c05",
         "render_distance_type": "fixed"
       },
       "weather": {
-        "fog_start": 4,
-        "fog_end": 32,
-        "fog_color": "#000000",
+        "fog_start": 0.0,
+        "fog_end": 28.0,
+        "fog_color": "#160c05",
         "render_distance_type": "fixed"
       }
     }
