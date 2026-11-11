@@ -1,0 +1,26 @@
+// ---------- clouds ----------
+const clouds = [];
+{ const r = P.rng(90);
+  for (let i = 0; i < 14; i++) {
+    const c = document.createElement('canvas'); c.width = 600; c.height = 400; const pen = new T.Pen(c.getContext('2d')); pen.ol = 0;
+    pen.g.translate(300, 200); pen.g.scale(1.4, 1.2); pen.g.translate(-300, -200); T.fxCloud(pen, i + 1);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.667), new THREE.MeshBasicMaterial({ map: P.tex(c), transparent: true, fog: false, depthWrite: false }));
+    const a = r() * Math.PI * 2, d = 650 + r() * 250; m.position.set(Math.cos(a) * d, 120 + r() * 160, Math.sin(a) * d); m.scale.setScalar(160 + r() * 140);
+    m.userData.ndSkip = true; m.renderOrder = -1; scene.add(m); clouds.push(m);
+  } }
+
+function drawActors(list, cam) {
+  POOL.hi.forEach((c) => { c.mesh.visible = c.blob.visible = false; }); POOL.lo.forEach((c) => { c.mesh.visible = c.blob.visible = false; });
+  const n = { hi: 0, lo: 0 };
+  list.forEach((a) => {
+    const kind = a.hi ? 'hi' : 'lo', c = getCard(kind, n[kind]++);
+    c.draw(a.key, a.draw);
+    c.mesh.visible = true; c.mesh.position.set(a.x, a.y + (a.bobY || 0), a.z);
+    const s = a.s || 1; c.mesh.scale.set(s * (a.flip ? -1 : 1), s, s);
+    c.mesh.rotation.set(0, Math.atan2(cam.position.x - a.x, cam.position.z - a.z) + (a.yaw || 0), a.roll || 0);
+    c.mat.color.set(a.tint || '#ffffff'); c.mat.opacity = a.alpha ?? 1;
+    c.mesh.castShadow = a.shadow !== false;
+    c.mesh.renderOrder = a.order || 2;
+    if (a.blob !== false && a.y < 0.5) { c.blob.visible = true; c.blob.position.set(a.x, (a.ground ?? GROUND) + 0.025, a.z); c.blob.scale.set(0.95 * s, 0.6 * s, 1); }
+  });
+}

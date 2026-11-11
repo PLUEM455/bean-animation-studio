@@ -1,0 +1,25 @@
+// ---------- cards (2D characters in the 3D world). hi = close-ups, lo = crowd / fx ----------
+const CM = 2.25;
+const cardGeo = new THREE.PlaneGeometry(CM * 0.6, CM); cardGeo.translate(0, CM / 2 - CM * 0.025, 0);
+const blobTex = P.tex(P.radial('20,14,30', 0.6));
+class Card {
+  constructor(hi) {
+    this.CW = hi ? 1200 : 480; this.CH = hi ? 2000 : 800;
+    this.c = document.createElement('canvas'); this.c.width = this.CW; this.c.height = this.CH; this.g = this.c.getContext('2d');
+    this.t = new THREE.CanvasTexture(this.c); this.t.colorSpace = THREE.SRGBColorSpace; this.t.anisotropy = hi ? 4 : 1;
+    this.mat = new THREE.MeshBasicMaterial({ map: this.t, transparent: true, alphaTest: 0.02, side: THREE.DoubleSide, fog: true });
+    this.mesh = new THREE.Mesh(cardGeo, this.mat); this.mesh.userData.nd = cardNd(this.t); this.mesh.castShadow = true;
+    this.mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: this.t, alphaTest: 0.5 });
+    this.blob = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, fog: true }));
+    this.blob.rotation.x = -Math.PI / 2; this.blob.userData.ndSkip = true; this.blob.renderOrder = 1;
+    scene.add(this.mesh); scene.add(this.blob); this.key = ''; this.mesh.visible = this.blob.visible = false;
+  }
+  draw(key, fn) {
+    if (key === this.key) return; this.key = key;
+    const g = this.g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, this.CW, this.CH); g.setTransform(this.CW / 600, this.CH / 1000, 0, 0, 0, 0);
+    g.setTransform(this.CW / 600, 0, 0, this.CH / 1000, 0, 0);
+    const p = new T.Pen(g); fn(p); this.t.needsUpdate = true;
+  }
+}
+const POOL = { hi: [], lo: [] };
+const getCard = (kind, i) => POOL[kind][i] || (POOL[kind][i] = new Card(kind === 'hi'));

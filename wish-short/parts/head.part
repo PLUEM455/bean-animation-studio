@@ -1,0 +1,24 @@
+import * as THREE from './lib/three.module.js';
+import * as T from './toon.js';
+import * as P from './paint.js';
+import { TOTAL, shotAt, camAt, dofAt, lightFor, actorsAt, worldAt, fxAt } from './story.js';
+
+const QS = new URLSearchParams(location.search);
+const W = +(QS.get('w') || 1080), H = Math.round(W * 16 / 9), RS = W / 1080;
+try { await document.fonts.load('700 40px Prompt'); } catch (e) { console.log('font load failed', e.message); }
+const canvas = document.getElementById('c'); canvas.width = W; canvas.height = H;
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, W / H, 0.08, 1500);
+const rx = (a) => a * Math.PI / 180;
+
+// ---------- materials ----------
+const grad = (() => { const d = new Uint8Array([90, 90, 90, 255, 255, 255, 255, 255]); const t = new THREE.DataTexture(d, 2, 1); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const toon = (opts) => new THREE.MeshToonMaterial({ gradientMap: grad, ...opts });
+const texM = (c, rx_ = 1, ry_ = 1, color = '#ffffff') => toon({ map: P.tex(c, rx_, ry_), color });
+const NOINK = 'noink';

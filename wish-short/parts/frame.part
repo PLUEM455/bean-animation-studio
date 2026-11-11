@@ -1,0 +1,28 @@
+const fwd = new THREE.Vector3();
+window.renderFrame = (f) => {
+  const S = shotAt(f), L = lightFor(S, f), C = camAt(f);
+  applyLight(L, f);
+  camera.position.set(...C.pos); camera.up.set(0, 1, 0); camera.lookAt(...C.look); camera.rotateZ(rx(C.roll || 0));
+  camera.fov = C.fov; camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+  const Wd = worldAt(f); applyRuin(Wd.ruin || 0); applyProps(Wd);
+  crack.visible = (Wd.crack || 0) > 0;
+  if (crack.visible) { drawCrack(Wd.crack); camera.getWorldDirection(fwd); crack.position.copy(camera.position).addScaledVector(fwd, 900); crack.quaternion.copy(camera.quaternion);
+    const h = 2 * 900 * Math.tan(rx(camera.fov / 2)) * 1.05; crack.scale.set(h * (W / H), h, 1); }
+  placeSun(L, new THREE.Vector3(...(C.shadowAt || C.look)));
+  drawActors([...actorsAt(f, T), ...fxAt(f, T)], camera);
+  sky.position.copy(camera.position);
+  for (const c of clouds) c.quaternion.copy(camera.quaternion);
+  renderer.setRenderTarget(rtColor); renderer.setClearColor(0x000000, 1); renderer.clear(); renderer.render(scene, camera);
+  const fog = scene.fog; scene.fog = null; const sm = renderer.shadowMap.enabled; renderer.shadowMap.enabled = false; renderer.shadowMap.autoUpdate = false;
+  swapForNd(true); renderer.setRenderTarget(rtNd); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, camera); swapForNd(false);
+  scene.fog = fog; renderer.shadowMap.enabled = sm; renderer.shadowMap.autoUpdate = true;
+  if (window.DEBUG_ND) { const dm = new THREE.MeshBasicMaterial({ map: rtNd.texture }); const ds = fs(dm); renderer.setRenderTarget(null); renderer.render(ds, fsCam); return true; }
+  const D = dofAt(f);
+  inkU.px.value = 2.5 * RS; inkU.flash.value = window.DEBUG_E ? -1 : (C.flash || 0); inkU.vig.value = L.vig ?? 0.22;
+  renderer.setRenderTarget(rtInk); renderer.render(inkScene, fsCam);
+  dofU.focus.value = D.focus; dofU.cinf.value = (D.cinf || 0) * RS; dofU.near.value = D.near ?? 1;
+  renderer.setRenderTarget(null); renderer.render(dofScene, fsCam);
+  return true;
+};
+window.TOTAL = TOTAL;
+window.ready = true;
