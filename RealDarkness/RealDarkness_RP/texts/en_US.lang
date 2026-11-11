@@ -1,0 +1,10 @@
+item.realdarkness.settings=Real Darkness Settings
+realdarkness.form.title=Real Darkness Settings
+realdarkness.form.fog=Night fog
+realdarkness.form.density=Fog density
+realdarkness.form.density.thin=Thin
+realdarkness.form.density.medium=Medium
+realdarkness.form.density.thick=Thick
+realdarkness.form.held_light=Light from held items
+realdarkness.msg.no_permission=§cOnly the world owner (operator) can change Real Darkness settings.
+realdarkness.msg.saved=§aReal Darkness settings saved.

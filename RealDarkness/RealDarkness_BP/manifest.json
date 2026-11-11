@@ -1,0 +1,58 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Real Darkness",
+    "description": "Very dark nights, black fog, held-item light",
+    "uuid": "12c663b0-6cbf-4341-8bca-6d0abe3d2c39",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      60
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "91eeabef-1329-4f45-af7d-124bf4beede6",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "887af482-fdb6-475b-854f-2ed711ee7240",
+      "version": [
+        1,
+        0,
+        0
+      ],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.11.0"
+    },
+    {
+      "module_name": "@minecraft/server-ui",
+      "version": "2.3.0"
+    },
+    {
+      "uuid": "327626e9-b9bc-4463-a491-8c377a9fc0a4",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

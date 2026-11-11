@@ -1,0 +1,29 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Real Darkness (Resources)",
+    "description": "Night fog and textures for Real Darkness",
+    "uuid": "327626e9-b9bc-4463-a491-8c377a9fc0a4",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      60
+    ]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "0cdafc27-cee8-4306-be9b-13bfad414e7e",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

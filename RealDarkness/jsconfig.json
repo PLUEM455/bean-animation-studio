@@ -1,0 +1,1 @@
+{ "compilerOptions": { "checkJs": true, "noEmit": true, "target": "es2020", "module": "es2020", "moduleResolution": "node", "strict": false }, "include": ["RealDarkness_BP/scripts/**/*.js"] }
