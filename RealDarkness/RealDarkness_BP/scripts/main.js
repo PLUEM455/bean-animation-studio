@@ -1,7 +1,7 @@
 // Real Darkness — behavior script
 import { world, system, EquipmentSlot, PlayerPermissionLevel, BlockPermutation, MoonPhase, BiomeTypes } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
-import { getBiomeLighting, getBiomeAtmospherics } from "@minecraft/server-graphics";
+import { getPlayerLighting, getPlayerAtmospherics, getPlayerColorGrading } from "@minecraft/server-graphics";
 
 const NS = "realdarkness";
 const FOG_TAG = "realdarkness";
@@ -158,18 +158,25 @@ const AMBIENT_LUX = [0.004, 0.001, 0.0003, 0.0001]; // per darkness level
 const MOON_SCALE = [0.8, 0.5, 0.25, 0.08];           // per darkness level
 const ECLIPSE_SUN_LUX = { eclipse_total_1: 20000, eclipse_total_2: 2000, eclipse_total_3: 20, eclipse_annular_1: 40000, eclipse_annular_2: 20000, eclipse_annular_3: 10000 };
 const SUN_MIE = { halo: 40, haze: 25 };
+// Night colour grading: darken shadows/midtones only, highlights (light sources) untouched.
+const NIGHT_GAIN = [0.6, 0.4, 0.2, 0.08]; // per darkness level
+const lightingKeys = new Map(); // player.id -> applied key
 let lightingKey = "";
 
 // Each call guarded on its own so one unsupported value cannot block the others.
 function safe(fn) { try { fn(); } catch (e) { /* not supported for this biome */ } }
 
-function applyLighting(l, a, s, st) {
+function applyLighting(l, a, g, s, st) {
   safe(() => l.resetAmbientIlluminance()); safe(() => l.resetMoonIlluminance());
   safe(() => l.resetMoonColor()); safe(() => l.resetSunIlluminance()); safe(() => a.resetSunMieStrength());
+  safe(() => g.resetShadowsGain()); safe(() => g.resetMidtonesGain());
   if (st.kind === "night") {
     safe(() => l.setAmbientIlluminance(AMBIENT_LUX[s.density]));
     safe(() => l.setMoonIlluminance(Math.max(0.0001, (MOON_LUX[st.profile] ?? 0.4) * MOON_SCALE[s.density])));
     if (MOON_COLOR[st.profile]) safe(() => l.setMoonColor(MOON_COLOR[st.profile]));
+    const k = NIGHT_GAIN[s.density];
+    safe(() => g.setShadowsGain({ x: k, y: k, z: k }));
+    safe(() => g.setMidtonesGain({ x: k * 1.5, y: k * 1.5, z: k * 1.5 }));
   } else if (st.kind === "eclipse") {
     safe(() => l.setSunIlluminance(ECLIPSE_SUN_LUX[st.profile] ?? 20000));
   } else if (SUN_MIE[st.kind]) {
@@ -177,23 +184,25 @@ function applyLighting(l, a, s, st) {
   }
 }
 
-function updateLighting(s, st) {
+// Per-player controls take precedence over biome/resource-pack values.
+function updateLighting(player, s, st) {
   const key = `${st.kind}_${st.profile}_${s.density}`;
-  if (key === lightingKey) return;
   lightingKey = key;
+  if (lightingKeys.get(player.id) === key) return;
+  lightingKeys.set(player.id, key);
   for (const biome of BiomeTypes.getAll()) {
-    let l, a;
-    try { l = getBiomeLighting(biome); a = getBiomeAtmospherics(biome); } catch (e) { continue; }
-    applyLighting(l, a, s, st);
+    let l, a, g;
+    try { l = getPlayerLighting(biome, player); a = getPlayerAtmospherics(biome, player); g = getPlayerColorGrading(biome, player); } catch (e) { continue; }
+    applyLighting(l, a, g, s, st);
   }
 }
 
 system.runInterval(() => {
   const s = getSettings();
   const st = worldState();
-  updateLighting(s, st);
   for (const player of world.getAllPlayers()) {
     try { updateFog(player, s, st); } catch (e) { /* player not ready */ }
+    try { updateLighting(player, s, st); } catch (e) { /* player not ready */ }
   }
 }, 20);
 
@@ -302,6 +311,7 @@ world.afterEvents.playerLeave.subscribe(({ playerId }) => {
   removeGroup(playerId);
   extinguished.delete(playerId);
   currentFog.delete(playerId);
+  lightingKeys.delete(playerId);
 });
 
 // ---------- settings item ----------
@@ -337,7 +347,7 @@ world.afterEvents.itemUse.subscribe(({ source: player, itemStack }) => {
       const [fog, density, heldLight] = res.formValues;
       saveSettings({ fog: !!fog, density: Number(density), heldLight: !!heldLight });
       currentFog.clear(); // re-apply fog for everyone
-      lightingKey = "";   // re-apply lighting
+      lightingKeys.clear(); // re-apply lighting
       player.sendMessage({ translate: "realdarkness.msg.saved" });
     });
 });
