@@ -1,0 +1,58 @@
+{
+  "format_version": "1.10.0",
+  "particle_effect": {
+    "description": {
+      "identifier": "jjk:gojo_eye_glow",
+      "basic_render_parameters": {
+        "material": "particles_add",
+        "texture": "textures/particle/jjk_particles"
+      }
+    },
+    "components": {
+      "minecraft:emitter_rate_steady": {
+        "spawn_rate": 12,
+        "max_particles": 8
+      },
+      "minecraft:emitter_lifetime_looping": {
+        "active_time": 1
+      },
+      "minecraft:emitter_local_space": {
+        "position": true,
+        "rotation": true
+      },
+      "minecraft:emitter_shape_point": {},
+      "minecraft:particle_lifetime_expression": {
+        "max_lifetime": 0.3
+      },
+      "minecraft:particle_initial_speed": 0,
+      "minecraft:particle_appearance_billboard": {
+        "size": [
+          "0.11 * (1 - v.particle_age / v.particle_lifetime) + 0.03",
+          "0.11 * (1 - v.particle_age / v.particle_lifetime) + 0.03"
+        ],
+        "facing_camera_mode": "rotate_xyz",
+        "uv": {
+          "texture_width": 64,
+          "texture_height": 16,
+          "uv": [
+            0,
+            0
+          ],
+          "uv_size": [
+            16,
+            16
+          ]
+        }
+      },
+      "minecraft:particle_appearance_tinting": {
+        "color": {
+          "interpolant": "v.particle_age / v.particle_lifetime",
+          "gradient": {
+            "0.0": "#FFBDF2FF",
+            "1.0": "#0050B4FF"
+          }
+        }
+      }
+    }
+  }
+}
