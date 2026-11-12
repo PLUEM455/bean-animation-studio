@@ -1,0 +1,21 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "foleypeep:mr_foleypeep",
+      "materials": { "default": "entity_alphatest" },
+      "textures": { "default": "textures/entity/foleypeep/mr_foleypeep" },
+      "geometry": { "default": "geometry.mr_foleypeep" },
+      "animations": {
+        "idle": "animation.foleypeep.idle",
+        "peek": "animation.foleypeep.peek",
+        "attack": "animation.foleypeep.attack",
+        "jumpscare": "animation.foleypeep.jumpscare",
+        "pose": "controller.animation.foleypeep.pose"
+      },
+      "scripts": { "animate": ["pose"] },
+      "render_controllers": ["controller.render.default"],
+      "spawn_egg": { "base_color": "#2a2420", "overlay_color": "#e6dcc4" }
+    }
+  }
+}

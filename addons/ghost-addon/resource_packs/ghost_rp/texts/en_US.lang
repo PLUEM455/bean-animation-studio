@@ -1,0 +1,6 @@
+entity.foleypeep:mr_foleypeep.name=Mr. Foleypeep
+entity.foleypeep:giant.name=Mr. Foleypeep (Giant)
+entity.foleypeep:mimic.name=Mr. Foleypeep (Mimic)
+item.spawn_egg.entity.foleypeep:mr_foleypeep.name=Spawn Mr. Foleypeep
+item.spawn_egg.entity.foleypeep:giant.name=Spawn Mr. Foleypeep (Giant)
+item.spawn_egg.entity.foleypeep:mimic.name=Spawn Mr. Foleypeep (Mimic)
