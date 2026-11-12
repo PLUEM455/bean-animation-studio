@@ -3,6 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 python3 tools/gen_gojo_model.py
+python3 tools/gen_toji_model.py
 python3 tools/gen_icons.py
 node --test tests/*.test.mjs
 rm -rf dist/stage && mkdir -p dist/stage
