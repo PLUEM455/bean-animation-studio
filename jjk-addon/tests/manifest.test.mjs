@@ -23,3 +23,11 @@ test('module types', () => {
   assert.equal(bp().modules[0].type, 'data');
   assert.equal(rp().modules[0].type, 'resources');
 });
+test('bp script module on stable @minecraft/server 2.9.0', () => {
+  const m = bp();
+  const s = m.modules.find((x) => x.type === 'script');
+  assert.equal(s.language, 'javascript');
+  assert.equal(s.entry, 'scripts/main.js');
+  const dep = m.dependencies.find((d) => d.module_name === '@minecraft/server');
+  assert.equal(dep.version, '2.9.0');
+});

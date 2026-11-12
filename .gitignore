@@ -1,3 +1,4 @@
 .superpowers/
 jjk-addon/dist/
 __pycache__/
+node_modules/

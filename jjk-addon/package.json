@@ -1,0 +1,7 @@
+{
+  "name": "jjk-addon-dev",
+  "private": true,
+  "type": "module",
+  "scripts": { "typecheck": "tsc -p jsconfig.json" },
+  "devDependencies": { "@minecraft/server": "2.9.0", "typescript": "5.6.3" }
+}
