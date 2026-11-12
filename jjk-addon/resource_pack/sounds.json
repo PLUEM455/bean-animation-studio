@@ -1,0 +1,44 @@
+{
+  "entity_sounds": {
+    "entities": {
+      "jjk:gojo": {
+        "volume": 1.0,
+        "pitch": [
+          0.92,
+          1.08
+        ],
+        "events": {
+          "hurt": "jjk.gojo.hurt",
+          "death": "jjk.gojo.death",
+          "step": {
+            "sound": "jjk.step",
+            "volume": 0.35,
+            "pitch": [
+              0.9,
+              1.1
+            ]
+          }
+        }
+      },
+      "jjk:toji": {
+        "volume": 1.0,
+        "pitch": [
+          0.92,
+          1.08
+        ],
+        "events": {
+          "hurt": "jjk.toji.hurt",
+          "death": "jjk.toji.death",
+          "step": {
+            "sound": "jjk.step",
+            "volume": 0.35,
+            "pitch": [
+              0.9,
+              1.1
+            ]
+          }
+        }
+      }
+    }
+  }
+}
