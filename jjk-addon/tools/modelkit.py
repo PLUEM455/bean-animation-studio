@@ -75,7 +75,7 @@ def put(img, rect, i, j, color):
 
 
 # ---------- outputs ----------
-def build(name, bones_decl, cubes, paint, tex=128, view=(24, 40), preview_cubes=None):
+def build(name, bones_decl, cubes, paint, tex=128, view=(24, 40), preview_cubes=None, locators=None):
     uvs = pack(cubes, tex)
     img = Image.new("RGBA", (tex, tex), CLEAR)
     bones = {n: {"name": n, "pivot": pivot, **({"parent": parent} if parent else {})}
@@ -88,6 +88,8 @@ def build(name, bones_decl, cubes, paint, tex=128, view=(24, 40), preview_cubes=
             cube["inflate"] = inflate
         cube.update(extra)
         bones[bone].setdefault("cubes", []).append(cube)
+    for bone, locs in (locators or {}).items():
+        bones[bone]["locators"] = locs
 
     geo = {
         "format_version": "1.12.0",

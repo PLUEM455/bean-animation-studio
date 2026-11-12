@@ -284,5 +284,9 @@ def weapon_sheet(tex):
 if __name__ == "__main__":
     seed(946)
     body = [c for c in CUBES if c[0] not in WEAPON_BONES or c[0] == "katana"]
-    build("toji", BONES, CUBES, paint, tex=128, preview_cubes=body)
+    build("toji", BONES, CUBES, paint, tex=128, preview_cubes=body, locators={
+        "rightArm": {"hand_r": [-6, 11, -1]},
+        "root": {"feet": [0, 0.2, 0]},
+        "body": {"center": [0, 18, 0], "slash": [0, 18, -10]},
+    })
     weapon_sheet(128)

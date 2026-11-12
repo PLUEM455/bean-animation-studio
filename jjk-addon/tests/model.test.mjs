@@ -72,3 +72,12 @@ test('toji weapons held in right hand, only katana visible', () => {
   assert.equal(vis.katana, true);
   for (const w of WEAPONS.filter((x) => x !== 'katana')) assert.equal(vis[w], false, w);
 });
+
+const LOCATORS = { gojo: ['eye_l', 'eye_r', 'hand_r', 'feet', 'center'], toji: ['hand_r', 'feet', 'center', 'slash'] };
+for (const [name, locs] of Object.entries(LOCATORS)) {
+  test(`${name} effect locators`, () => {
+    const bones = readJson(`resource_pack/models/entity/${name}.geo.json`)['minecraft:geometry'][0].bones;
+    const all = Object.assign({}, ...bones.map((b) => b.locators ?? {}));
+    for (const l of locs) assert.ok(Array.isArray(all[l]) && all[l].length === 3, `${name} missing locator ${l}`);
+  });
+}

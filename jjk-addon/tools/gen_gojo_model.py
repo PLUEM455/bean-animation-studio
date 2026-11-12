@@ -201,4 +201,9 @@ def paint(img, style, f):
 
 
 if __name__ == "__main__":
-    build("gojo", BONES, CUBES, paint)
+    build("gojo", BONES, CUBES, paint, locators={
+        "eyes": {"eye_l": [-2, 27.5, -4.3], "eye_r": [2, 27.5, -4.3]},
+        "rightArm": {"hand_r": [-6, 11, -1]},
+        "root": {"feet": [0, 0.2, 0]},
+        "body": {"center": [0, 18, 0]},
+    })
