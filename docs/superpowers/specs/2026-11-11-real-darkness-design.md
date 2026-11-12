@@ -79,3 +79,10 @@ Sun/moon toggle in the menu: not possible — no script API swaps textures at ru
 - Smoothing as before, but gaps > 4 steps move 2 steps per update.
 - Held light back to a single light block at the head (no four-corner pattern).
 - Packs 1.4.0.
+
+## Revision 7 (2026-11-12)
+- Fix: light-block list was built during early execution (BlockTypes unavailable) → empty → placed lights ignored. Now built lazily on first scan.
+- Fog steps [4 … 64] (never closer than 4 blocks, so the ground stays visible when jumping); fog_start 35% for steps ≤ 8.
+- Light response: vis = best^1.1 × (0.65 + 0.35 × amount); step = vis^1.2 × 14.
+- Faster creep: EMA 0.6, up to 2 steps per second (3 when the gap is > 5).
+- Packs 1.4.1.

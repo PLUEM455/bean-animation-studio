@@ -38,7 +38,7 @@ const LIGHT_ITEMS = {
 
 // Light-emitting placed blocks and their vanilla light levels (lava and fire included).
 // Unknown ids are dropped at load.
-const LIGHT_LEVELS = Object.fromEntries(Object.entries({
+const LIGHT_LEVELS_ALL = {
   "minecraft:torch": 14, "minecraft:soul_torch": 10, "minecraft:redstone_torch": 7, "minecraft:copper_torch": 14,
   "minecraft:lantern": 15, "minecraft:soul_lantern": 10, "minecraft:glowstone": 15, "minecraft:sea_lantern": 15,
   "minecraft:shroomlight": 15, "minecraft:lit_pumpkin": 15, "minecraft:beacon": 15, "minecraft:campfire": 15,
@@ -49,8 +49,23 @@ const LIGHT_LEVELS = Object.fromEntries(Object.entries({
   "minecraft:respawn_anchor": 15, "minecraft:conduit": 15, "minecraft:sea_pickle": 6,
   "minecraft:cave_vines_head_with_berries": 14, "minecraft:cave_vines_body_with_berries": 14,
   "minecraft:enchanting_table": 7, "minecraft:ender_chest": 7, "minecraft:amethyst_cluster": 5,
-}).filter(([id]) => { try { return !!BlockTypes.get(id); } catch (e) { return false; } }));
-const LIGHT_BLOCKS = Object.keys(LIGHT_LEVELS);
+};
+// Built on first use (after the world has loaded): scripts start in early execution, where
+// BlockTypes lookups are not allowed, which made this list empty before.
+/** @type {Record<string, number> | undefined} */
+let LIGHT_LEVELS;
+/** @type {string[]} */
+let LIGHT_BLOCKS = [];
+function lightLevels() {
+  if (!LIGHT_LEVELS) {
+    LIGHT_LEVELS = {};
+    for (const [id, level] of Object.entries(LIGHT_LEVELS_ALL)) {
+      try { if (BlockTypes.get(id)) LIGHT_LEVELS[id] = level; } catch (e) { /* unknown id */ }
+    }
+    LIGHT_BLOCKS = Object.keys(LIGHT_LEVELS);
+  }
+  return LIGHT_LEVELS;
+}
 const MAX_SOURCES = 64; // cap per scan (e.g. lava lakes) to keep it light
 
 // ---------- settings (world-wide) ----------
@@ -151,7 +166,7 @@ const STATE_TINT = { golden: "golden", halo: "halo", haze: "haze", eclipse: "ecl
 const DAY_KINDS = ["day", "golden", "halo", "haze", "eclipse"];
 
 // Fog end distances (must match tools/make_fogs.py). Index NO_FOG = no fog.
-const FOG_STEPS = [2, 3, 4, 5, 6, 8, 10, 13, 16, 20, 25, 32, 40, 50, 64];
+const FOG_STEPS = [4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 25, 32, 40, 50, 64];
 const NO_FOG = FOG_STEPS.length;
 const TINT_STEP = 13; // daytime colour-only fog (golden hour, halo, haze, eclipse ramp)
 
@@ -159,13 +174,14 @@ const TINT_STEP = 13; // daytime colour-only fog (golden hour, halo, haze, eclip
 function nearbyLights(player) {
   const loc = player.location;
   const sources = [];
+  const levels = lightLevels();
   const from = { x: Math.floor(loc.x) - SCAN_RADIUS, y: Math.floor(loc.y) - SCAN_HEIGHT, z: Math.floor(loc.z) - SCAN_RADIUS };
   const to = { x: Math.floor(loc.x) + SCAN_RADIUS, y: Math.floor(loc.y) + SCAN_HEIGHT, z: Math.floor(loc.z) + SCAN_RADIUS };
-  try {
+  if (LIGHT_BLOCKS.length) try {
     const list = player.dimension.getBlocks(new BlockVolume(from, to), { includeTypes: LIGHT_BLOCKS });
     for (const p of list.getBlockLocationIterator()) {
       const d = Math.hypot(p.x + 0.5 - loc.x, p.y + 0.5 - loc.y, p.z + 0.5 - loc.z);
-      const level = LIGHT_LEVELS[player.dimension.getBlock(p)?.typeId ?? ""] ?? 0;
+      const level = levels[player.dimension.getBlock(p)?.typeId ?? ""] ?? 0;
       if (level > d) sources.push({ d, level });
       if (sources.length >= MAX_SOURCES) break;
     }
@@ -204,12 +220,12 @@ function rawVisibility(player) {
     total += c;
   }
   const amount = Math.min(1, (total - best) / 4); // extra sources beyond the strongest
-  return Math.min(1, Math.pow(best, 1.3) * (0.6 + 0.4 * amount));
+  return Math.min(1, Math.pow(best, 1.1) * (0.65 + 0.35 * amount));
 }
 
 function stepFor(vis) {
   if (vis >= 0.97) return NO_FOG;
-  return Math.min(NO_FOG - 1, Math.max(0, Math.round(Math.pow(vis, 1.5) * (NO_FOG - 1))));
+  return Math.min(NO_FOG - 1, Math.max(0, Math.round(Math.pow(vis, 1.2) * (NO_FOG - 1))));
 }
 
 function fogTint(st, player) {
@@ -230,13 +246,13 @@ function updateFog(player, s, st) {
   if (s.fog && player.dimension.id === "minecraft:overworld") {
     const daylight = inDaylight(player, st);
     const raw = daylight ? 1 : rawVisibility(player);
-    vis = prev ? prev.vis + (raw - prev.vis) * 0.35 : raw;
+    vis = prev ? prev.vis + (raw - prev.vis) * 0.6 : raw;
     let target = daylight ? NO_FOG : stepFor(vis);
     if (daylight && STATE_TINT[st.kind] && skyLight(player) >= 5) target = TINT_STEP; // colour only
-    const exact = Math.pow(Math.min(vis, 0.999), 1.5) * (NO_FOG - 1);
+    const exact = Math.pow(Math.min(vis, 0.999), 1.2) * (NO_FOG - 1);
     step = !prev ? target
       : target === prev.step || (!daylight && target !== NO_FOG && prev.step !== NO_FOG && Math.abs(exact - prev.step) < 0.6) ? prev.step
-      : prev.step + Math.sign(target - prev.step) * (Math.abs(target - prev.step) > 4 ? 2 : 1); // big gaps close a bit faster
+      : prev.step + Math.sign(target - prev.step) * Math.min(Math.abs(target - prev.step), Math.abs(target - prev.step) > 5 ? 3 : 2); // faster creep
     if (step < NO_FOG) want = `${NS}:${fogTint(st, player)}_${step}`;
   }
   if (prev && prev.id === want) { prev.vis = vis; prev.step = step; return; }
