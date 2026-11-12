@@ -57,6 +57,42 @@ def egg():
     img.save(out)
 
 
+def toji_egg():
+    """Black hair top, purple Inventory-curse band across, white pants base."""
+    S = 32
+    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    cx, cy, rx, ry = 15.5, 16.5, 10.5, 14.0
+    for y in range(S):
+        for x in range(S):
+            k = 1.0 - 0.18 * ((cy - y + 0.5) / ry)
+            if ((x + 0.5 - cx) / (rx * k)) ** 2 + ((y + 0.5 - cy) / ry) ** 2 > 1.0:
+                continue
+            lx = ((x - cx) / rx + (y - cy) / ry) * 0.5
+            band = y - (0.55 * x + 6)  # diagonal worm, top-left -> bottom-right
+            hair_line = 12 + int(1.6 * math.sin(x * 0.9 + 1) + (x % 3 == 0))  # messy hair edge
+            if 0 <= band <= 4:
+                ring = (x + y) % 3 == 0
+                base = (168, 104, 206) if lx < -0.1 else (132, 72, 176) if lx < 0.3 else (98, 48, 138)
+                c = tuple(int(v * 0.8) for v in base) if ring else base
+            elif y < hair_line:
+                c = (70, 70, 80) if lx < -0.2 else (46, 46, 54) if lx < 0.25 else (28, 28, 34)
+            else:
+                c = (255, 255, 255) if lx < -0.1 else (236, 236, 242) if lx < 0.3 else (206, 206, 218)
+            img.putpixel((x, y), c + (255,))
+    px = img.load()
+    edge = [(x, y) for y in range(S) for x in range(S) if px[x, y][3] and any(
+        not (0 <= x + dx < S and 0 <= y + dy < S) or px[x + dx, y + dy][3] == 0
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
+    for x, y in edge:
+        img.putpixel((x, y), OUTLINE)
+    for x, y in ((11, 5), (10, 6), (10, 7)):  # highlight
+        img.putpixel((x, y), (150, 150, 165, 255))
+    for x, y in ((20, 23), (21, 22), (22, 21), (23, 20)):  # blade glint
+        img.putpixel((x, y), (200, 214, 230, 255))
+    img.putpixel((22, 21), (255, 255, 255, 255))
+    img.save(ROOT / "resource_pack/textures/items/toji_spawn_egg.png")
+
+
 def pack_icon():
     S = 256
     bg = Image.new("RGBA", (S, S))
@@ -80,4 +116,5 @@ def pack_icon():
 
 if __name__ == "__main__":
     egg()
+    toji_egg()
     pack_icon()

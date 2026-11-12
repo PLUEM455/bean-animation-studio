@@ -2,6 +2,11 @@
   "resource_pack_name": "jjk",
   "texture_name": "atlas.items",
   "texture_data": {
-    "jjk_gojo_spawn_egg": { "textures": "textures/items/gojo_spawn_egg" }
+    "jjk_gojo_spawn_egg": {
+      "textures": "textures/items/gojo_spawn_egg"
+    },
+    "jjk_toji_spawn_egg": {
+      "textures": "textures/items/toji_spawn_egg"
+    }
   }
 }

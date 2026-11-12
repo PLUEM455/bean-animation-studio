@@ -14,7 +14,11 @@
       },
       "render_controllers": [
         "controller.render.jjk.toji"
-      ]
+      ],
+      "spawn_egg": {
+        "texture": "jjk_toji_spawn_egg",
+        "texture_index": 0
+      }
     }
   }
 }
