@@ -1,0 +1,28 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Rule Wands BP",
+    "description": "คฑา 3 อัน: ฆ่า / รักษา / สั่งให้สู้กัน",
+    "uuid": "2e3a83bc-f250-4eec-84d0-2f2806fef98a",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 26, 30]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "1e4dd795-f6ea-4058-a201-5b79c13cf278",
+      "version": [1, 0, 0]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "c6bdf58e-3594-438c-bbf6-92ae41dbe4bd",
+      "entry": "scripts/main.js",
+      "version": [1, 0, 0]
+    }
+  ],
+  "dependencies": [
+    { "module_name": "@minecraft/server", "version": "2.8.0" },
+    { "uuid": "118d1f79-10dc-4c01-8f79-53ddccefb678", "version": [1, 0, 0] }
+  ]
+}
