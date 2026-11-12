@@ -86,3 +86,10 @@ Sun/moon toggle in the menu: not possible — no script API swaps textures at ru
 - Light response: vis = best^1.1 × (0.65 + 0.35 × amount); step = vis^1.2 × 14.
 - Faster creep: EMA 0.6, up to 2 steps per second (3 when the gap is > 5).
 - Packs 1.4.1.
+
+## Revision 8 (2026-11-12) — light zones
+- Each light: lit radius R = level/2, influence zone to 2R. Effect = level/15 inside R, fades linearly to 0 at 2R. Held items count as level+1 at the holder.
+- vis = best × (0.75 + 0.25 × min(1, others/3)); step = vis^1.3 × 14 over [6 … 64]; at night/caves never fully clear (max 64).
+- Scan box 33×17×33, cached: rescan after moving 2 blocks, every 3 s, or immediately when a light block is placed/broken.
+- Fog updated twice per second; light opens fog at once, darkness creeps back up to 3 steps per update.
+- Packs 1.5.0.

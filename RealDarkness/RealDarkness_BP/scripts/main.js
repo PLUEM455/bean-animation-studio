@@ -8,8 +8,10 @@ import { ModalFormData } from "@minecraft/server-ui";
 const NS = "realdarkness";
 const FOG_TAG = "realdarkness";
 const SETTINGS_ITEM = "realdarkness:settings";
-const SCAN_RADIUS = 12;      // horizontal blocks counted as "near" (25x13x25 box, ~8k blocks)
-const SCAN_HEIGHT = 6;       // vertical half-height of the scan box
+const SCAN_RADIUS = 16;      // covers the 2R zone of the brightest lights (R = level / 2)
+const SCAN_HEIGHT = 8;       // vertical half-height of the scan box
+const RESCAN_MOVE = 2;       // rescan after moving this many blocks
+const RESCAN_TICKS = 60;     // or at least every 3 seconds (placing/breaking lights rescans at once)
 // Vanilla light levels of light-emitting items (held light uses these values).
 const LIGHT_ITEMS = {
   "minecraft:torch": 14,
@@ -166,34 +168,64 @@ const STATE_TINT = { golden: "golden", halo: "halo", haze: "haze", eclipse: "ecl
 const DAY_KINDS = ["day", "golden", "halo", "haze", "eclipse"];
 
 // Fog end distances (must match tools/make_fogs.py). Index NO_FOG = no fog.
-const FOG_STEPS = [4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 25, 32, 40, 50, 64];
+const FOG_STEPS = [6, 7, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 50, 64];
 const NO_FOG = FOG_STEPS.length;
 const TINT_STEP = 13; // daytime colour-only fog (golden hour, halo, haze, eclipse ramp)
 
-// Light sources near the player: list of { d, level } (held light items of all players count too).
-function nearbyLights(player) {
+// ---- light sources (cached scan, cheap per-update distance math) ----
+// Each light has a lit radius R = level / 2 and an influence zone out to 2R.
+// Inside R: full effect. Between R and 2R: fades linearly. Beyond 2R: nothing.
+const scanCache = new Map(); // player.id -> { x, y, z, tick, dim, blocks: [{x,y,z,level}] }
+
+function scanLights(player) {
   const loc = player.location;
-  const sources = [];
+  const c = scanCache.get(player.id);
+  const now = system.currentTick;
+  if (c && c.dim === player.dimension.id && now - c.tick < RESCAN_TICKS &&
+      Math.abs(c.x - loc.x) < RESCAN_MOVE && Math.abs(c.y - loc.y) < RESCAN_MOVE && Math.abs(c.z - loc.z) < RESCAN_MOVE) {
+    return c.blocks;
+  }
   const levels = lightLevels();
+  const blocks = [];
   const from = { x: Math.floor(loc.x) - SCAN_RADIUS, y: Math.floor(loc.y) - SCAN_HEIGHT, z: Math.floor(loc.z) - SCAN_RADIUS };
   const to = { x: Math.floor(loc.x) + SCAN_RADIUS, y: Math.floor(loc.y) + SCAN_HEIGHT, z: Math.floor(loc.z) + SCAN_RADIUS };
   if (LIGHT_BLOCKS.length) try {
     const list = player.dimension.getBlocks(new BlockVolume(from, to), { includeTypes: LIGHT_BLOCKS });
     for (const p of list.getBlockLocationIterator()) {
-      const d = Math.hypot(p.x + 0.5 - loc.x, p.y + 0.5 - loc.y, p.z + 0.5 - loc.z);
       const level = levels[player.dimension.getBlock(p)?.typeId ?? ""] ?? 0;
-      if (level > d) sources.push({ d, level });
-      if (sources.length >= MAX_SOURCES) break;
+      if (level > 0) blocks.push({ x: p.x + 0.5, y: p.y + 0.5, z: p.z + 0.5, level });
+      if (blocks.length >= MAX_SOURCES) break;
     }
   } catch (e) { /* unloaded area */ }
+  scanCache.set(player.id, { x: loc.x, y: loc.y, z: loc.z, tick: now, dim: player.dimension.id, blocks });
+  return blocks;
+}
+
+// Strength 0..1 of one light at distance d.
+function lightEffect(d, level) {
+  const r = level / 2;
+  const base = level / 15;
+  if (d <= r) return base;
+  if (d >= 2 * r) return 0;
+  return base * (1 - (d - r) / r);
+}
+
+// Lights affecting the player: list of { d, level } (placed blocks + held items of every player).
+function nearbyLights(player) {
+  const loc = player.location;
+  const out = [];
+  for (const b of scanLights(player)) {
+    const d = Math.hypot(b.x - loc.x, b.y - loc.y, b.z - loc.z);
+    if (d < b.level) out.push({ d, level: b.level });
+  }
   for (const other of world.getAllPlayers()) {
     if (other.dimension.id !== player.dimension.id) continue;
     const level = heldItem(other).level;
     if (level <= 0) continue;
     const d = other.id === player.id ? 0 : Math.hypot(other.location.x - loc.x, other.location.y - loc.y, other.location.z - loc.z);
-    if (level > d) sources.push({ d, level });
+    if (d < level) out.push({ d, level: Math.min(15, level + 1) }); // held light a bit brighter
   }
-  return sources;
+  return out;
 }
 
 function skyLight(player) {
@@ -207,25 +239,23 @@ function inDaylight(player, st) {
   return skyLight(player) >= 12;
 }
 
-// Visibility 0..1 from light sources only: brightness reaching the player (like the game's
-// light: level minus distance) plus a bonus for how many sources are around.
+// Visibility 0..1: strongest light reaching the player, plus a bonus for other lights around.
 function rawVisibility(player) {
-  const sources = nearbyLights(player);
-  if (!sources.length) return 0;
   let best = 0;
   let total = 0;
-  for (const { d, level } of sources) {
-    const c = Math.max(0, (level - d) / 15);
-    best = Math.max(best, c);
-    total += c;
+  for (const { d, level } of nearbyLights(player)) {
+    const e = lightEffect(d, level);
+    best = Math.max(best, e);
+    total += e;
   }
-  const amount = Math.min(1, (total - best) / 4); // extra sources beyond the strongest
-  return Math.min(1, Math.pow(best, 1.1) * (0.65 + 0.35 * amount));
+  if (best <= 0) return 0;
+  const extra = Math.min(1, (total - best) / 3);
+  return Math.min(1, best * (0.75 + 0.25 * extra));
 }
 
+// At night/in caves the fog never disappears completely: brightest = 64 blocks.
 function stepFor(vis) {
-  if (vis >= 0.97) return NO_FOG;
-  return Math.min(NO_FOG - 1, Math.max(0, Math.round(Math.pow(vis, 1.2) * (NO_FOG - 1))));
+  return Math.min(NO_FOG - 1, Math.max(0, Math.round(Math.pow(vis, 1.3) * (NO_FOG - 1))));
 }
 
 function fogTint(st, player) {
@@ -246,13 +276,14 @@ function updateFog(player, s, st) {
   if (s.fog && player.dimension.id === "minecraft:overworld") {
     const daylight = inDaylight(player, st);
     const raw = daylight ? 1 : rawVisibility(player);
-    vis = prev ? prev.vis + (raw - prev.vis) * 0.6 : raw;
+    vis = prev ? prev.vis + (raw - prev.vis) * (raw > prev.vis ? 0.9 : 0.6) : raw;
     let target = daylight ? NO_FOG : stepFor(vis);
     if (daylight && STATE_TINT[st.kind] && skyLight(player) >= 5) target = TINT_STEP; // colour only
-    const exact = Math.pow(Math.min(vis, 0.999), 1.2) * (NO_FOG - 1);
+    const exact = Math.pow(Math.min(vis, 0.999), 1.3) * (NO_FOG - 1);
     step = !prev ? target
       : target === prev.step || (!daylight && target !== NO_FOG && prev.step !== NO_FOG && Math.abs(exact - prev.step) < 0.6) ? prev.step
-      : prev.step + Math.sign(target - prev.step) * Math.min(Math.abs(target - prev.step), Math.abs(target - prev.step) > 5 ? 3 : 2); // faster creep
+      : target > prev.step ? target // light opens the fog at once
+      : prev.step - Math.min(prev.step - target, 3); // darkness creeps back in, up to 3 steps per update
     if (step < NO_FOG) want = `${NS}:${fogTint(st, player)}_${step}`;
   }
   if (prev && prev.id === want) { prev.vis = vis; prev.step = step; return; }
@@ -265,10 +296,10 @@ function updateFog(player, s, st) {
 // Each player is updated once per second, spread over different ticks so the work never piles up.
 let lastState = { kind: "day", profile: "" };
 system.runInterval(() => {
-  const slot = system.currentTick % 20;
+  const slot = system.currentTick % 10;
   const players = world.getAllPlayers();
   if (!players.length) return;
-  const due = players.filter((_, i) => (i * 7) % 20 === slot);
+  const due = players.filter((_, i) => (i * 3) % 10 === slot);
   if (!due.length) return;
   const s = getSettings();
   const st = worldState();
@@ -384,7 +415,15 @@ system.afterEvents.scriptEventReceive.subscribe(({ id, sourceEntity }) => {
   for (const p of targets) extinguish(/** @type {import("@minecraft/server").Player} */ (p));
 });
 
+world.afterEvents.playerPlaceBlock.subscribe(({ block }) => {
+  if (lightLevels()[block.typeId]) scanCache.clear(); // rescan everyone
+});
+world.afterEvents.playerBreakBlock.subscribe(({ brokenBlockPermutation }) => {
+  if (lightLevels()[brokenBlockPermutation.type.id]) scanCache.clear();
+});
+
 world.afterEvents.playerLeave.subscribe(({ playerId }) => {
+  scanCache.delete(playerId);
   removeGroup(playerId);
   extinguished.delete(playerId);
   fogState.delete(playerId);
