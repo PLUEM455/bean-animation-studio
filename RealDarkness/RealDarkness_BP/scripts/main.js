@@ -8,8 +8,8 @@ import { ModalFormData } from "@minecraft/server-ui";
 const NS = "realdarkness";
 const FOG_TAG = "realdarkness";
 const SETTINGS_ITEM = "realdarkness:settings";
-const SCAN_RADIUS = 24;      // horizontal blocks counted as "near"
-const SCAN_HEIGHT = 12;      // vertical half-height of the scan box
+const SCAN_RADIUS = 12;      // horizontal blocks counted as "near" (25x13x25 box, ~8k blocks)
+const SCAN_HEIGHT = 6;       // vertical half-height of the scan box
 // Vanilla light levels of light-emitting items (held light uses these values).
 const LIGHT_ITEMS = {
   "minecraft:torch": 14,
@@ -141,9 +141,9 @@ function worldState() {
 
 // ---------- automatic fog ----------
 // Brightness of the sky (sun/moon) for the current state, 0..1.
-const NIGHT_SKY = { new: 0.0, crescent: 0.08, quarter: 0.16, gibbous: 0.24, full: 0.32, super: 0.45, micro: 0.2, blood: 0.04, honey: 0.32, loykrathong: 0.5 };
+const NIGHT_SKY = { new: 0.0, crescent: 0.04, quarter: 0.09, gibbous: 0.14, full: 0.2, super: 0.3, micro: 0.12, blood: 0.02, honey: 0.2, loykrathong: 0.35 };
 const ECLIPSE_SKY = { eclipse_total_1: 0.6, eclipse_total_2: 0.3, eclipse_total_3: 0.02, eclipse_annular_1: 0.8, eclipse_annular_2: 0.6, eclipse_annular_3: 0.45 };
-const STATE_SKY = { day: 1.0, golden: 0.6, halo: 0.9, haze: 0.5 };
+const STATE_SKY = { day: 1.0, golden: 0.45, halo: 0.9, haze: 0.4 };
 const NIGHT_TINT = { blood: "blood", honey: "honey", loykrathong: "loykrathong" };
 const STATE_TINT = { golden: "golden", halo: "halo", haze: "haze", eclipse: "eclipse" };
 
@@ -179,18 +179,22 @@ function nearbyLights(player) {
   return { nearest, count };
 }
 
-// Target fog step for a player (0 = narrowest, NO_FOG = clear).
-function targetStep(player, st) {
+// Raw visibility 0..1 for a player right now (before smoothing).
+function rawVisibility(player, st) {
   let sky = 0;
   try { sky = player.dimension.getSkyLightLevel(player.getHeadLocation()); } catch (e) { /* out of world */ }
   const skyVis = skyBrightness(st) * Math.min(1, sky / 12);
   const { nearest, count } = nearbyLights(player);
   const closeness = nearest === Infinity ? 0 : Math.max(0, 1 - nearest / SCAN_RADIUS);
-  const amount = Math.min(1, count / 8);
-  const lightVis = closeness * (0.45 + 0.55 * amount);
-  const vis = 1 - (1 - skyVis) * (1 - lightVis);
+  const amount = Math.min(1, count / 10);
+  const lightVis = Math.pow(closeness, 1.5) * (0.35 + 0.65 * amount);
+  return 1 - (1 - skyVis) * (1 - lightVis);
+}
+
+// Visibility -> fog step (curve keeps dark places narrow; NO_FOG only when really bright).
+function stepFor(vis) {
   if (vis >= 0.97) return NO_FOG;
-  return Math.min(NO_FOG - 1, Math.round(vis * (NO_FOG - 1)));
+  return Math.min(NO_FOG - 1, Math.max(0, Math.round(Math.pow(vis, 1.3) * (NO_FOG - 1))));
 }
 
 function fogTint(st, player) {
@@ -201,33 +205,47 @@ function fogTint(st, player) {
   return STATE_TINT[st.kind] ?? "black";
 }
 
-const fogState = new Map(); // player.id -> { step, id }
+const fogState = new Map(); // player.id -> { vis, step, id }
 
+// Smooth and stable: visibility eases toward the target (EMA), the step changes at most
+// one per update, and a small dead zone stops flickering between two steps.
 function updateFog(player, s, st) {
   const prev = fogState.get(player.id);
   let want = "";
   let step = NO_FOG;
+  let vis = 1;
   if (s.fog && player.dimension.id === "minecraft:overworld") {
-    const target = targetStep(player, st);
-    step = prev ? prev.step + Math.sign(target - prev.step) : target; // move one step per update
+    const raw = rawVisibility(player, st);
+    vis = prev ? prev.vis + (raw - prev.vis) * 0.35 : raw;
+    const target = stepFor(vis);
+    const exact = Math.pow(Math.min(vis, 0.999), 1.3) * (NO_FOG - 1);
+    step = !prev ? target
+      : target === prev.step || (target !== NO_FOG && prev.step !== NO_FOG && Math.abs(exact - prev.step) < 0.6) ? prev.step
+      : prev.step + Math.sign(target - prev.step);
     if (step < NO_FOG) want = `${NS}:${fogTint(st, player)}_${step}`;
   }
-  if (prev && prev.id === want) { prev.step = step; return; }
+  if (prev && prev.id === want) { prev.vis = vis; prev.step = step; return; }
   const fs = player.fogSettings;
   while (fs.getTags().includes(FOG_TAG)) fs.pop(FOG_TAG);
   if (want) fs.push(want, FOG_TAG);
-  fogState.set(player.id, { step, id: want });
+  fogState.set(player.id, { vis, step, id: want });
 }
 
+// Each player is updated once per second, spread over different ticks so the work never piles up.
 let lastState = { kind: "day", profile: "" };
 system.runInterval(() => {
+  const slot = system.currentTick % 20;
+  const players = world.getAllPlayers();
+  if (!players.length) return;
+  const due = players.filter((_, i) => (i * 7) % 20 === slot);
+  if (!due.length) return;
   const s = getSettings();
   const st = worldState();
   lastState = st;
-  for (const player of world.getAllPlayers()) {
+  for (const player of due) {
     try { updateFog(player, s, st); } catch (e) { /* player not ready */ }
   }
-}, 20);
+}, 1);
 
 // ---------- held light (head + 4 points ~4 blocks away) ----------
 const OFFSETS = [[0, 0], [4, 0], [-4, 0], [0, 4], [0, -4]];
@@ -309,7 +327,7 @@ system.runInterval(() => {
   for (const player of world.getAllPlayers()) {
     try { updateHeldLight(player, s); } catch (e) { /* player not ready */ }
   }
-}, 2);
+}, 4);
 
 // Other add-ons can put the held light out: /scriptevent realdarkness:extinguish
 // (run as / targeting a player, or from the console to affect everyone).
