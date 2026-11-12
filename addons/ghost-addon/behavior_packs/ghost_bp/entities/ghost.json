@@ -1,0 +1,85 @@
+{
+  "format_version": "1.21.0",
+  "minecraft:entity": {
+    "description": {
+      "identifier": "ghost:ghost",
+      "is_spawnable": true,
+      "is_summonable": true,
+      "is_experimental": false
+    },
+    "component_groups": {},
+    "components": {
+      "minecraft:type_family": {
+        "family": ["ghost", "monster"]
+      },
+      "minecraft:health": {
+        "value": 30,
+        "max": 30
+      },
+      "minecraft:collision_box": {
+        "width": 0.8,
+        "height": 1.9
+      },
+      "minecraft:physics": {
+        "has_gravity": false,
+        "has_collision": false
+      },
+      "minecraft:navigation.generic": {
+        "can_path_over_water": true,
+        "can_fly": true,
+        "can_walk": false,
+        "can_open_doors": false,
+        "avoid_water": false
+      },
+      "minecraft:movement": {
+        "value": 0.3
+      },
+      "minecraft:movement.basic": {},
+      "minecraft:attack": {
+        "damage": 6,
+        "effect_name": "blindness",
+        "effect_duration": 6
+      },
+      "minecraft:ambient_sound_interval": {
+        "value": 4.0,
+        "range": 6.0,
+        "event_name": "mob.ghast.moan"
+      },
+      "minecraft:behavior.nearest_attackable_target": {
+        "priority": 2,
+        "must_see": false,
+        "within_radius": 40,
+        "reselect_targets": true,
+        "entity_types": [
+          {
+            "filters": {
+              "test": "is_family",
+              "subject": "other",
+              "value": "player"
+            },
+            "max_dist": 40
+          }
+        ]
+      },
+      "minecraft:behavior.melee_attack": {
+        "priority": 1,
+        "speed_multiplier": 1.2,
+        "track_target": true
+      },
+      "minecraft:behavior.move_towards_target": {
+        "priority": 3,
+        "speed_multiplier": 1.0,
+        "within_radius": 2
+      },
+      "minecraft:behavior.random_flying": {
+        "priority": 6,
+        "speed_multiplier": 0.6
+      },
+      "minecraft:behavior.look_at_player": {
+        "priority": 7,
+        "look_distance": 16
+      }
+    },
+    "events": {}
+  }
+}
