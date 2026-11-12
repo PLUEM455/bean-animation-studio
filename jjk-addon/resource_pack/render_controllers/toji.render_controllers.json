@@ -1,0 +1,17 @@
+{
+  "format_version": "1.8.0",
+  "render_controllers": {
+    "controller.render.jjk.toji": {
+      "geometry": "Geometry.default",
+      "materials": [{ "*": "Material.default" }],
+      "textures": ["Texture.default"],
+      "part_visibility": [
+        { "katana": true },
+        { "playfulCloud": false },
+        { "spear": false },
+        { "chain": false },
+        { "pistol": false }
+      ]
+    }
+  }
+}

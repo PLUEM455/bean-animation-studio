@@ -75,7 +75,7 @@ def put(img, rect, i, j, color):
 
 
 # ---------- outputs ----------
-def build(name, bones_decl, cubes, paint, tex=128, view=(24, 40)):
+def build(name, bones_decl, cubes, paint, tex=128, view=(24, 40), preview_cubes=None):
     uvs = pack(cubes, tex)
     img = Image.new("RGBA", (tex, tex), CLEAR)
     bones = {n: {"name": n, "pivot": pivot, **({"parent": parent} if parent else {})}
@@ -107,7 +107,8 @@ def build(name, bones_decl, cubes, paint, tex=128, view=(24, 40)):
     texf = ROOT / f"resource_pack/textures/entity/{name}.png"
     texf.parent.mkdir(parents=True, exist_ok=True)
     img.save(texf)
-    preview(name, img, cubes, uvs, view)
+    keep = [(c, uv) for c, uv in zip(cubes, uvs) if preview_cubes is None or c in preview_cubes]
+    preview(name, img, [c for c, _ in keep], [uv for _, uv in keep], view)
 
 
 def preview(name, img, cubes, uvs, view, scale=8):

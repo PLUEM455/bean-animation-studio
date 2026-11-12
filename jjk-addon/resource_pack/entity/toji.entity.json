@@ -1,0 +1,20 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "jjk:toji",
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "default": "textures/entity/toji"
+      },
+      "geometry": {
+        "default": "geometry.jjk.toji"
+      },
+      "render_controllers": [
+        "controller.render.jjk.toji"
+      ]
+    }
+  }
+}
