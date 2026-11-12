@@ -1,0 +1,6 @@
+entity.foleypeep:mr_foleypeep.name=Mr. Foleypeep
+entity.foleypeep:giant.name=Mr. Foleypeep (ร่างยักษ์)
+entity.foleypeep:mimic.name=Mr. Foleypeep (ร่างเลียนแบบ)
+item.spawn_egg.entity.foleypeep:mr_foleypeep.name=เสก Mr. Foleypeep
+item.spawn_egg.entity.foleypeep:giant.name=เสก Mr. Foleypeep (ร่างยักษ์)
+item.spawn_egg.entity.foleypeep:mimic.name=เสก Mr. Foleypeep (ร่างเลียนแบบ)

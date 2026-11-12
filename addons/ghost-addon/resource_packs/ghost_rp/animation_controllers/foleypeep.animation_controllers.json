@@ -1,0 +1,46 @@
+{
+  "format_version": "1.10.0",
+  "animation_controllers": {
+    "controller.animation.foleypeep.pose": {
+      "initial_state": "idle",
+      "states": {
+        "idle": {
+          "animations": ["idle"],
+          "blend_transition": 0.15,
+          "transitions": [
+            { "peek": "q.property('foleypeep:pose') == 1" },
+            { "attack": "q.property('foleypeep:pose') == 2" },
+            { "jumpscare": "q.property('foleypeep:pose') == 3" }
+          ]
+        },
+        "peek": {
+          "animations": ["peek"],
+          "blend_transition": 0.15,
+          "transitions": [
+            { "idle": "q.property('foleypeep:pose') == 0" },
+            { "attack": "q.property('foleypeep:pose') == 2" },
+            { "jumpscare": "q.property('foleypeep:pose') == 3" }
+          ]
+        },
+        "attack": {
+          "animations": ["attack"],
+          "blend_transition": 0.1,
+          "transitions": [
+            { "idle": "q.property('foleypeep:pose') == 0" },
+            { "peek": "q.property('foleypeep:pose') == 1" },
+            { "jumpscare": "q.property('foleypeep:pose') == 3" }
+          ]
+        },
+        "jumpscare": {
+          "animations": ["jumpscare"],
+          "blend_transition": 0.05,
+          "transitions": [
+            { "idle": "q.property('foleypeep:pose') == 0" },
+            { "peek": "q.property('foleypeep:pose') == 1" },
+            { "attack": "q.property('foleypeep:pose') == 2" }
+          ]
+        }
+      }
+    }
+  }
+}

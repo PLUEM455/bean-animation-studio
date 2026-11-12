@@ -1,0 +1,21 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "foleypeep:mimic",
+      "materials": { "default": "entity_alphatest" },
+      "textures": { "default": "textures/entity/foleypeep/mimic" },
+      "geometry": { "default": "geometry.foleypeep_mimic" },
+      "animations": {
+        "idle": "animation.foleypeep.idle",
+        "peek": "animation.foleypeep.peek",
+        "attack": "animation.foleypeep.attack",
+        "jumpscare": "animation.foleypeep.jumpscare",
+        "pose": "controller.animation.foleypeep.pose"
+      },
+      "scripts": { "animate": ["pose"] },
+      "render_controllers": ["controller.render.default"],
+      "spawn_egg": { "base_color": "#2f4a4a", "overlay_color": "#b6aea2" }
+    }
+  }
+}

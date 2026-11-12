@@ -1,17 +1,17 @@
 {
   "format_version": 2,
   "header": {
-    "name": "Ghost Addon RP",
-    "description": "Ghost model and texture for the ghost mob.",
+    "name": "Mr. Foleypeep RP",
+    "description": "Models, textures, animations and sounds for Mr. Foleypeep.",
     "uuid": "7559f371-c3d8-4bd6-be2b-56e32b908a62",
-    "version": [1, 0, 0],
-    "min_engine_version": [1, 26, 0]
+    "version": [2, 0, 0],
+    "min_engine_version": [1, 21, 60]
   },
   "modules": [
     {
       "type": "resources",
       "uuid": "b3f1c9d2-5a7e-4c1b-9e8f-2d6a4c7b1e03",
-      "version": [1, 0, 0]
+      "version": [2, 0, 0]
     }
   ]
 }

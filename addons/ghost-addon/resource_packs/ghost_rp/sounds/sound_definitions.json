@@ -1,0 +1,13 @@
+{
+  "format_version": "1.20.20",
+  "sound_definitions": {
+    "foleypeep.peek": { "category": "hostile", "min_distance": 1.0, "max_distance": 24.0, "sounds": [{ "name": "sounds/foleypeep/peek", "volume": 1.0 }] },
+    "foleypeep.caught": { "category": "hostile", "min_distance": 1.0, "max_distance": 24.0, "sounds": [{ "name": "sounds/foleypeep/caught", "volume": 1.0 }] },
+    "foleypeep.fake_laugh": { "category": "hostile", "min_distance": 1.0, "max_distance": 32.0, "sounds": [{ "name": "sounds/foleypeep/fake_laugh", "volume": 1.0 }] },
+    "foleypeep.attack": { "category": "hostile", "min_distance": 1.0, "max_distance": 32.0, "sounds": [{ "name": "sounds/foleypeep/attack", "volume": 1.0 }] },
+    "foleypeep.double_fake": { "category": "hostile", "min_distance": 1.0, "max_distance": 32.0, "sounds": [{ "name": "sounds/foleypeep/double_fake", "volume": 1.0 }] },
+    "foleypeep.chase": { "category": "hostile", "min_distance": 1.0, "max_distance": 32.0, "sounds": [{ "name": "sounds/foleypeep/chase", "volume": 1.0 }] },
+    "foleypeep.behind": { "category": "hostile", "min_distance": 1.0, "max_distance": 16.0, "sounds": [{ "name": "sounds/foleypeep/behind", "volume": 1.0 }] },
+    "foleypeep.ambient": { "category": "ambient", "sounds": [{ "name": "sounds/foleypeep/ambient", "volume": 1.0, "is3D": false }] }
+  }
+}
