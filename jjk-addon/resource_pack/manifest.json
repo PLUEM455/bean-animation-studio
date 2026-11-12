@@ -1,0 +1,29 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "JJK Addon RP",
+    "description": "Jujutsu Kaisen: Satoru Gojo (resources)",
+    "uuid": "a4ed9d76-a1f7-4530-baa2-036cce686f40",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      21,
+      0
+    ]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "0d42f42b-4753-451c-b4ea-3842450ebf41",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

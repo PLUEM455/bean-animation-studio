@@ -1,0 +1,39 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "JJK Addon BP",
+    "description": "Jujutsu Kaisen: Satoru Gojo (behavior)",
+    "uuid": "c0491f63-8748-4604-914d-70e9ca70b1da",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      21,
+      0
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "14712aee-f354-42fe-99c8-1bd15b7c43da",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "a4ed9d76-a1f7-4530-baa2-036cce686f40",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}
