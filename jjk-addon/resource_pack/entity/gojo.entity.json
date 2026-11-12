@@ -3,10 +3,22 @@
   "minecraft:client_entity": {
     "description": {
       "identifier": "jjk:gojo",
-      "materials": { "default": "entity_alphatest" },
-      "textures": { "default": "textures/entity/gojo" },
-      "geometry": { "default": "geometry.jjk.gojo" },
-      "render_controllers": ["controller.render.jjk.gojo"]
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "default": "textures/entity/gojo"
+      },
+      "geometry": {
+        "default": "geometry.jjk.gojo"
+      },
+      "render_controllers": [
+        "controller.render.jjk.gojo"
+      ],
+      "spawn_egg": {
+        "texture": "jjk_gojo_spawn_egg",
+        "texture_index": 0
+      }
     }
   }
 }
