@@ -52,7 +52,7 @@ function fightSelect(player, entity) {
   }
   pendingFight.delete(player.id);
   fights = fights.filter((f) => ![f.a.id, f.b.id].some((id) => id === first.id || id === entity.id));
-  fights.push({ a: first, b: entity, tick: 0 });
+  fights.push({ a: first, b: entity });
   player.sendMessage({
     rawtext: [{ text: "§c" }, mobName(first), { text: " §fสู้กับ §c" }, mobName(entity), { text: "§f!" }],
   });
@@ -60,11 +60,18 @@ function fightSelect(player, entity) {
   provoke(entity, first);
 }
 
-/** ตีเบาๆ ในนามอีกฝ่าย ให้ม็อบที่มี AI โจมตีหันไปเล็งศัตรูเอง */
-function provoke(attacker, victim, damage = 1) {
+/**
+ * ยั่วยุ: ทำให้ victim "รู้สึก" ว่าโดน attacker ตี เพื่อให้ AI ของมันหันไปล็อกเป้าและโจมตีเอง
+ * เหมือนตอนผู้เล่นไปตีมัน แล้วคืนเลือดทันที (ดาเมจจริงมาจากการโจมตีของม็อบเท่านั้น)
+ */
+function provoke(attacker, victim) {
+  const hp = victim.getComponent("minecraft:health");
+  if (!hp || hp.currentValue <= 1) return;
+  const before = hp.currentValue;
   try {
-    victim.applyDamage(damage, { cause: EntityDamageCause.entityAttack, damagingEntity: attacker });
+    victim.applyDamage(1, { cause: EntityDamageCause.entityAttack, damagingEntity: attacker });
   } catch {}
+  if (victim.isValid) hp.setCurrentValue(before);
 }
 
 function useWand(player, wand, entity) {
@@ -93,27 +100,18 @@ world.beforeEvents.playerInteractWithEntity.subscribe((ev) => {
   system.run(() => useWand(player, wand, target));
 });
 
-// ลูปการต่อสู้: ดึงเข้าหากันและตีกันจนกว่าตัวใดตัวหนึ่งตาย
+// ลูปการต่อสู้: ไม่บังคับเดิน/ไม่บังคับตี ให้ AI ของม็อบสู้เอง
+// แค่ยั่วซ้ำทุก 3 วินาที กันไม่ให้มันเปลี่ยนเป้าไปหาผู้เล่นหรือตัวอื่น จนกว่าตัวใดตัวหนึ่งตาย
 system.runInterval(() => {
-  fights = fights.filter((f) => {
-    const { a, b } = f;
+  fights = fights.filter(({ a, b }) => {
     if (!a.isValid || !b.isValid || a.dimension.id !== b.dimension.id) return false;
-    const dx = b.location.x - a.location.x, dy = b.location.y - a.location.y, dz = b.location.z - a.location.z;
-    const dist = Math.hypot(dx, dy, dz);
-    if (dist > 48) return false;
-    f.tick++;
-    if (dist > 2.2) {
-      const k = Math.min(0.35, dist * 0.05) / (Math.hypot(dx, dz) || 1);
-      try { a.applyImpulse({ x: dx * k, y: 0, z: dz * k }); } catch {}
-      try { b.applyImpulse({ x: -dx * k, y: 0, z: -dz * k }); } catch {}
-    } else if (f.tick % 4 === 0) {
-      // ทุก ~1 วินาที (interval 5 tick x 4)
-      provoke(a, b, 3);
-      if (b.isValid) provoke(b, a, 3);
-    }
+    const { x, y, z } = a.location, l = b.location;
+    if (Math.hypot(l.x - x, l.y - y, l.z - z) > 48) return false;
+    provoke(b, a);
+    provoke(a, b);
     return true;
   });
-}, 5);
+}, 60);
 
 world.afterEvents.playerLeave.subscribe(({ playerId }) => {
   pendingFight.delete(playerId);
