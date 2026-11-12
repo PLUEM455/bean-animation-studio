@@ -15,7 +15,8 @@ test('mcaddon contains both packs', { skip: !process.env.JJK_CHECK_DIST && 'set 
     'JJK_RP/animations/gojo.animation.json', 'JJK_RP/animations/toji.animation.json',
     'JJK_RP/animation_controllers/jjk.animation_controllers.json', 'JJK_RP/particles/gojo_eye_glow.json',
     'JJK_RP/particles/toji_slash.json', 'JJK_RP/textures/particle/jjk_particles.png',
-    'JJK_RP/sounds/sound_definitions.json', 'JJK_RP/sounds.json', 'JJK_RP/sounds/jjk/gojo_attack_1.ogg'])
+    'JJK_RP/sounds/sound_definitions.json', 'JJK_RP/sounds.json', 'JJK_RP/sounds/jjk/gojo_attack_1.ogg',
+    'JJK_BP/scripts/main.js', 'JJK_BP/scripts/mobs/toji.js', 'JJK_BP/scripts/core/rope.js'])
     assert.ok(list.includes(f), `missing ${f}`);
   assert.ok(!list.some((f) => f.includes('preview/') || f.includes('tools/')), 'dev files leaked into archive');
 });

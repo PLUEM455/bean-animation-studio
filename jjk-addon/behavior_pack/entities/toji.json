@@ -11,6 +11,24 @@
           "type": "bool",
           "default": false,
           "client_sync": true
+        },
+        "jjk:weapon": {
+          "type": "int",
+          "range": [
+            0,
+            6
+          ],
+          "default": 1,
+          "client_sync": true
+        },
+        "jjk:chain_len": {
+          "type": "int",
+          "range": [
+            0,
+            20
+          ],
+          "default": 0,
+          "client_sync": true
         }
       }
     },

@@ -119,6 +119,135 @@ TOJI_ATTACK = {  # overhead diagonal katana slash
     "sound_effects": {"0.18": {"effect": "attack"}},
 }
 
+
+def once(length, bones, loop=False, **extra):
+    """non-looping skill animation; bones: {bone: {channel: {time: [x,y,z]}}}"""
+    out = {"loop": loop, "animation_length": length, "bones": {}}
+    for b, chans in bones.items():
+        out["bones"][b] = {ch: (kf(v) if isinstance(v, dict) else v) for ch, v in chans.items()}
+    out.update(extra)
+    return out
+
+
+Z = [0, 0, 0]
+CHAIN_SPEED = "math.clamp(8 / math.max(4, q.property('jjk:chain_len')), 0.4, 2.0)"
+
+GOJO_SKILLS = {
+    "combo": once(0.9, {
+        "rightArm": {"rotation": {0: Z, 0.15: [20, -10, 10], 0.25: [-95, 15, 0], 0.35: [-20, 0, 5],
+                                  0.65: [30, -10, 10], 0.75: [-110, 10, 0], 0.9: Z}},
+        "leftArm": {"rotation": {0: Z, 0.4: [20, 10, -10], 0.5: [-95, -15, 0], 0.6: [-10, 0, -5], 0.9: Z}},
+        "waist": {"rotation": {0: Z, 0.15: [0, 15, 0], 0.25: [5, -20, 0], 0.4: [0, -15, 0], 0.5: [5, 20, 0],
+                               0.65: [0, 15, 0], 0.75: [8, -25, 0], 0.9: Z}},
+    }),
+    "black_flash": once(0.5, {
+        "rightArm": {"rotation": {0: Z, 0.1: [40, -20, 15], 0.15: [-100, 10, 0], 0.35: [-90, 10, 0], 0.5: Z}},
+        "leftArm": {"rotation": {0: Z, 0.1: [-30, 0, -15], 0.15: [25, 0, -10], 0.5: Z}},
+        "waist": {"rotation": {0: Z, 0.1: [-5, 25, 0], 0.15: [12, -30, 0], 0.5: Z}},
+        "hair": {"rotation": {0: Z, 0.15: [-12, 0, 0], 0.5: Z}},
+    }),
+    "blue": once(1.2, {
+        "rightArm": {"rotation": {0: Z, 0.3: [-85, -20, 0], 1.0: [-80, -20, 0], 1.2: Z}},
+        "leftArm": {"rotation": {0: Z, 0.3: [-10, 0, -10], 1.2: Z}},
+        "head": {"rotation": {0: Z, 0.3: [-5, 0, 0], 1.2: Z}},
+    }),
+    "red": once(0.8, {
+        "rightArm": {"rotation": {0: Z, 0.2: [-70, 30, -30], 0.4: [-90, -5, 0], 0.8: Z}},
+        "leftArm": {"rotation": {0: Z, 0.2: [-30, 0, -10], 0.8: Z}},
+        "waist": {"rotation": {0: Z, 0.2: [0, 20, 0], 0.4: [4, -10, 0], 0.8: Z}},
+    }),
+    "pull": once(0.7, {
+        "rightArm": {"rotation": {0: Z, 0.15: [-90, 0, 0], 0.3: [-40, 0, 0], 0.45: [-95, 10, 0], 0.7: Z}},
+        "waist": {"rotation": {0: Z, 0.3: [-6, 15, 0], 0.45: [8, -20, 0], 0.7: Z}},
+    }),
+    "purple_charge": once(1.5, {
+        "rightArm": {"rotation": {0: Z, 0.4: [-80, 25, 0], 1.5: [-85, 8, 0]}},
+        "leftArm": {"rotation": {0: Z, 0.4: [-80, -25, 0], 1.5: [-85, -8, 0]}},
+        "waist": {"rotation": {0: Z, 0.4: [5, 0, 0], 1.5: [6, 0, 0]}},
+        "hair": {"rotation": {0: Z, 1.5: [-6, 0, 0]}},
+    }),
+    "purple_fire": once(0.8, {
+        "rightArm": {"rotation": {0: [-85, 8, 0], 0.1: [-95, 0, 0], 0.5: [-90, 0, 0], 0.8: Z}},
+        "leftArm": {"rotation": {0: [-85, -8, 0], 0.1: [-95, 0, 0], 0.5: [-90, 0, 0], 0.8: Z}},
+        "waist": {"rotation": {0: [6, 0, 0], 0.1: [-8, 0, 0], 0.8: Z}},
+        "hair": {"rotation": {0: Z, 0.1: [-15, 0, 0], 0.8: Z}},
+    }),
+    "domain": once(1.2, {
+        "rightArm": {"rotation": {0: Z, 0.4: [-130, -30, 30], 0.9: [-130, -30, 30], 1.2: Z}},
+        "leftArm": {"rotation": {0: Z, 0.4: [-10, 0, -15], 1.2: Z}},
+        "head": {"rotation": {0: Z, 0.4: [-10, 0, 0], 1.2: Z}},
+    }),
+    "blink": once(0.3, {
+        "waist": {"rotation": {0: Z, 0.1: [20, 0, 0], 0.3: Z}},
+        "root": {"position": {0: Z, 0.1: [0, -1.5, 0], 0.3: Z}},
+    }),
+    "rct": once(1.0, {
+        "rightArm": {"rotation": {0: Z, 0.3: [-10, 0, 60], 0.7: [-10, 0, 55], 1.0: Z}},
+        "leftArm": {"rotation": {0: Z, 0.3: [-10, 0, -60], 0.7: [-10, 0, -55], 1.0: Z}},
+        "head": {"rotation": {0: Z, 0.3: [-20, 0, 0], 1.0: Z}},
+    }),
+}
+
+TOJI_SKILLS = {
+    "cloud": once(1.0, {
+        "rightArm": {"rotation": {0: Z, 0.15: [-150, 30, 40], 0.25: [-40, -30, -40], 0.45: [-160, -20, -30],
+                                  0.6: [-50, 30, 40], 0.85: [-20, 0, 0], 1.0: Z}},
+        "waist": {"rotation": {0: Z, 0.15: [0, 30, 0], 0.25: [8, -30, 0], 0.45: [0, -25, 0], 0.6: [8, 30, 0], 1.0: Z}},
+    }),
+    "slam": once(0.9, {
+        "rightArm": {"rotation": {0: Z, 0.3: [-175, 0, 10], 0.5: [-40, 0, 5], 0.75: [-40, 0, 5], 0.9: Z}},
+        "leftArm": {"rotation": {0: Z, 0.3: [-170, 0, -10], 0.5: [-45, 0, -5], 0.75: [-45, 0, -5], 0.9: Z}},
+        "waist": {"rotation": {0: Z, 0.3: [-15, 0, 0], 0.5: [30, 0, 0], 0.75: [25, 0, 0], 0.9: Z}},
+        "root": {"position": {0: Z, 0.3: [0, 1.5, 0], 0.5: [0, -1, 0], 0.9: Z}},
+    }),
+    "fists": once(0.8, {
+        "rightArm": {"rotation": {0: Z, 0.15: [20, -10, 10], 0.25: [-95, 15, 0], 0.35: [-20, 0, 5],
+                                  0.65: [30, -10, 10], 0.75: [-110, 10, 0], 0.8: [-60, 0, 0]}},
+        "leftArm": {"rotation": {0: Z, 0.4: [20, 10, -10], 0.5: [-95, -15, 0], 0.6: [-10, 0, -5], 0.8: Z}},
+        "waist": {"rotation": {0: Z, 0.25: [8, -20, 0], 0.5: [8, 20, 0], 0.75: [10, -25, 0], 0.8: [5, -10, 0]}},
+    }),
+    "spear": once(0.6, {
+        "rightArm": {"rotation": {0: Z, 0.12: [20, 0, 10], 0.25: [-90, 0, 0], 0.45: [-85, 0, 0], 0.6: Z}},
+        "waist": {"rotation": {0: Z, 0.12: [-5, 20, 0], 0.25: [12, -15, 0], 0.6: Z}},
+    }),
+    "chain_aim": once(0.8, {
+        "rightArm": {"rotation": {0: Z, 0.3: [-170, 0, 20], 0.5: [-100, 0, 0], 0.8: [-95, 0, 0]}},
+        "waist": {"rotation": {0: Z, 0.3: [0, 25, 0], 0.5: [5, -20, 0], 0.8: [0, -10, 0]}},
+    }, loop="hold_on_last_frame",
+        anim_time_update="q.anim_time + q.delta_time * math.clamp(12 / math.max(12, q.property('jjk:chain_len')), 0.5, 1.0)"),
+    "chain_sweep": once(1.0, {
+        "rightArm": {"rotation": ["-160", "q.anim_time * 360", "15 + math.sin(q.anim_time * 360) * 10"]},
+        "waist": {"rotation": [4, "math.sin(q.anim_time * 360) * 6", 0]},
+        "head": {"rotation": ["-8", 0, 0]},
+    }, loop=True, anim_time_update=f"q.anim_time + q.delta_time * {CHAIN_SPEED}"),
+    "gun": once(0.9, {
+        "rightArm": {"rotation": {0: Z, 0.15: [-90, 0, 0], 0.2: [-105, 0, 0], 0.3: [-90, 0, 0], 0.45: [-105, 0, 0],
+                                  0.55: [-90, 0, 0], 0.7: [-105, 0, 0], 0.8: [-90, 0, 0], 0.9: Z}},
+        "head": {"rotation": {0: Z, 0.15: [0, -5, 0], 0.8: [0, -5, 0], 0.9: Z}},
+    }),
+    "blitz": once(0.6, {
+        "waist": {"rotation": {0: Z, 0.1: [35, 0, 0], 0.5: [35, 0, 0], 0.6: Z}},
+        "rightArm": {"rotation": {0: Z, 0.1: [50, 0, 10], 0.5: [50, 0, 10], 0.6: Z}},
+        "leftArm": {"rotation": {0: Z, 0.1: [50, 0, -10], 0.5: [50, 0, -10], 0.6: Z}},
+        "head": {"rotation": {0: Z, 0.1: [-30, 0, 0], 0.5: [-30, 0, 0], 0.6: Z}},
+        "root": {"position": {0: Z, 0.1: [0, -1, 0], 0.5: [0, -1, 0], 0.6: Z}},
+    }),
+    "backstab": once(0.5, {
+        "rightArm": {"rotation": {0: [-30, 0, 0], 0.1: [20, 0, 15], 0.2: [-100, -10, -10], 0.35: [-90, 0, 0], 0.5: Z}},
+        "waist": {"rotation": {0: Z, 0.1: [-5, 20, 0], 0.2: [12, -25, 0], 0.5: Z}},
+    }),
+    "inventory": once(0.4, {
+        "head": {"rotation": {0: Z, 0.15: [25, -30, 0], 0.4: Z}},
+        "rightArm": {"rotation": {0: Z, 0.15: [-160, 0, 20], 0.3: [-60, 0, 10], 0.4: Z}},
+    }),
+    "skm": once(1.0, {
+        "head": {"rotation": {0: Z, 0.3: [-35, 0, 0], 0.8: [-30, 0, 0], 1.0: Z}},
+        "rightArm": {"rotation": {0: Z, 0.3: [-20, 0, 45], 0.8: [-20, 0, 40], 1.0: Z}},
+        "leftArm": {"rotation": {0: Z, 0.3: [-20, 0, -45], 0.8: [-20, 0, -40], 1.0: Z}},
+        "waist": {"rotation": {0: Z, 0.3: [-12, 0, 0], 1.0: Z}},
+    }),
+}
+
 # Shared controllers. Movement blends by weight (no hard cuts): v.fight is a smoothed
 # 0..1 of the synced property jjk:fighting, so walk -> run fades in combat.
 MOVING = "math.clamp(q.ground_speed * 1.2, 0, 1)"
@@ -219,6 +348,8 @@ def main():
         "gojo": common("gojo", run_lean=14, run_arms_back=0, attack=GOJO_ATTACK),
         "toji": common("toji", run_lean=28, run_arms_back=35, attack=TOJI_ATTACK),
     }
+    for name, extra in (("gojo", GOJO_SKILLS), ("toji", TOJI_SKILLS)):
+        files[name].update({f"animation.jjk.{name}.{k}": v for k, v in extra.items()})
     for name, anims in files.items():
         (RP / f"animations/{name}.animation.json").write_text(
             json.dumps({"format_version": "1.8.0", "animations": anims}, indent=2) + "\n")

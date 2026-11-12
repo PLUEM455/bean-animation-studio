@@ -8,6 +8,7 @@ python3 tools/gen_anims.py
 python3 tools/gen_fx.py
 python3 tools/gen_sounds.py
 python3 tools/gen_icons.py
+if [ -d node_modules ]; then npx tsc -p jsconfig.json; fi  # Script API 2.9.0 type check
 node --test tests/*.test.mjs
 rm -rf dist/stage && mkdir -p dist/stage
 cp -r behavior_pack dist/stage/JJK_BP

@@ -48,6 +48,137 @@
       "sounds": [
         "sounds/jjk/toji_death"
       ]
+    },
+    "jjk.gojo.blue": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_blue"
+      ]
+    },
+    "jjk.gojo.red_charge": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_red_charge"
+      ]
+    },
+    "jjk.gojo.red_boom": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_red_boom"
+      ]
+    },
+    "jjk.gojo.purple_charge": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_purple_charge"
+      ]
+    },
+    "jjk.gojo.purple_fire": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_purple_fire"
+      ]
+    },
+    "jjk.gojo.domain": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_domain"
+      ]
+    },
+    "jjk.gojo.blink": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_blink"
+      ]
+    },
+    "jjk.gojo.black_flash": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_black_flash"
+      ]
+    },
+    "jjk.gojo.rct": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_rct"
+      ]
+    },
+    "jjk.gojo.infinity": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/gojo_infinity_1",
+        "sounds/jjk/gojo_infinity_2"
+      ]
+    },
+    "jjk.toji.cloud": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_cloud_1",
+        "sounds/jjk/toji_cloud_2"
+      ]
+    },
+    "jjk.toji.slam": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_slam"
+      ]
+    },
+    "jjk.toji.fist": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_fist_1",
+        "sounds/jjk/toji_fist_2"
+      ]
+    },
+    "jjk.toji.spear": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_spear"
+      ]
+    },
+    "jjk.toji.negate": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_negate"
+      ]
+    },
+    "jjk.toji.chain_throw": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_chain_throw"
+      ]
+    },
+    "jjk.toji.chain_clink": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_chain_clink_1",
+        "sounds/jjk/toji_chain_clink_2",
+        "sounds/jjk/toji_chain_clink_3"
+      ]
+    },
+    "jjk.toji.gun": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_gun"
+      ]
+    },
+    "jjk.toji.blitz": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_blitz"
+      ]
+    },
+    "jjk.toji.inventory": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_inventory"
+      ]
+    },
+    "jjk.toji.skm": {
+      "category": "neutral",
+      "sounds": [
+        "sounds/jjk/toji_skm"
+      ]
     }
   }
 }

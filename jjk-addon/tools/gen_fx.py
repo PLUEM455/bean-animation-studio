@@ -138,6 +138,61 @@ EFFECTS = {
 }
 
 
+def mk(ident, material, spr, n, life, size, colors, speed=0.0, shape=None, accel=(0, 0, 0), drag=0.0,
+       mode="rotate_xyz", grow=0.0):
+    """one-shot burst particle. size shrinks to 0 unless grow>0 (then grows by `grow`)."""
+    sz = f"{size} + {grow} * {AGE}" if grow else f"{size} * (1 - {AGE} * 0.85)"
+    bb = bill(spr, [sz, sz] if mode != "lookat_direction" else [f"{size * 3} * (1 - {AGE})", f"{size * 0.4}"], mode)
+    return particle(ident, material, {
+        **burst(n),
+        **(shape or {"minecraft:emitter_shape_sphere": {"radius": 0.1, "direction": "outwards"}}),
+        "minecraft:particle_lifetime_expression": {"max_lifetime": f"{life} * (0.75 + v.particle_random_1 * 0.5)"},
+        "minecraft:particle_initial_speed": f"{speed} * (0.6 + v.particle_random_2 * 0.8)" if speed else 0,
+        "minecraft:particle_motion_dynamic": {"linear_acceleration": list(accel), "linear_drag_coefficient": drag},
+        **bb, **tint(*colors),
+    })
+
+
+def sphere(r, direction="outwards", surface=False):
+    return {"minecraft:emitter_shape_sphere": {"radius": r, "direction": direction, "surface_only": surface}}
+
+
+ADD, BLEND = "particles_add", "particles_blend"
+SKILL_FX = {
+    "blue_orb": mk("jjk:blue_orb", ADD, 0, 14, 0.3, 0.35, ("#FFDFF6FF", "#000F5AFF"), 2.5, sphere(0.9, "inwards", True)),
+    "blue_swirl": mk("jjk:blue_swirl", ADD, 0, 1, 0.25, 0.12, ("#CC64C8FF", "#001E50C8")),
+    "red_orb": mk("jjk:red_orb", ADD, 0, 8, 0.2, 0.3, ("#FFFFD2B4", "#00C81E1E"), 0.6, sphere(0.35)),
+    "red_burst": mk("jjk:red_burst", ADD, 0, 70, 0.6, 0.35, ("#FFFFE6B4", "#00B4140A"), 9, sphere(0.3), drag=4),
+    "purple_beam": mk("jjk:purple_beam", ADD, 1, 4, 0.5, 0.4, ("#FFF0D2FF", "#005A0096"), 1.5, sphere(0.8, "random")),
+    "purple_core": mk("jjk:purple_core", ADD, 0, 12, 0.4, 0.7, ("#FFFFFFFF", "#0078289B"), 2, sphere(0.6)),
+    "domain_shell": mk("jjk:domain_shell", BLEND, 0, 1, 0.6, 0.22, ("#E614081E", "#00140A28")),
+    "domain_star": mk("jjk:domain_star", ADD, 1, 1, 0.8, 0.14, ("#FFFFFFFF", "#0096DCFF")),
+    "black_flash": mk("jjk:black_flash", BLEND, 2, 30, 0.3, 0.3, ("#FF0A0A0F", "#00B4141E"), 7, sphere(0.2),
+                      drag=5, mode="lookat_direction"),
+    "rct_aura": mk("jjk:rct_aura", ADD, 0, 6, 0.8, 0.12, ("#E6FFFFFF", "#00C8F0FF"), 0.4, sphere(0.5),
+                   accel=(0, 1.2, 0)),
+    "blink": mk("jjk:blink", ADD, 1, 20, 0.3, 0.16, ("#FFE6FFFF", "#003CA0FF"), 2.5, sphere(0.5), drag=4),
+    "infinity_ripple": mk("jjk:infinity_ripple", ADD, 0, 14, 0.35, 0.12, ("#B4C8F5FF", "#0050A0FF"), 1.6,
+                          sphere(0.4, "outwards", True), drag=3),
+    "debris": mk("jjk:debris", BLEND, 3, 6, 0.8, 0.25, ("#CC8C8278", "#008C8278"), 1.5, sphere(0.4), drag=2,
+                 grow=0.2),
+    "chain_link": mk("jjk:chain_link", BLEND, 0, 1, 0.1, 0.13, ("#FFD2D7E1", "#FF8C96A5")),
+    "spear_tip": mk("jjk:spear_tip", ADD, 1, 2, 0.12, 0.22, ("#FFFFFFFF", "#00B4A0FF")),
+    "negate": mk("jjk:negate", ADD, 1, 30, 0.45, 0.2, ("#FFFFFFFF", "#007828C8"), 5, sphere(0.3), drag=5),
+    "muzzle": mk("jjk:muzzle", ADD, 0, 10, 0.1, 0.18, ("#FFFFF0A0", "#00FF781E"), 2, sphere(0.05)),
+    "tracer": mk("jjk:tracer", ADD, 0, 1, 0.08, 0.06, ("#FFFFE6A0", "#00FFB43C")),
+    "afterimage": mk("jjk:afterimage", BLEND, 3, 1, 0.35, 0.5, ("#B4281432", "#00140A1E"), grow=0.1),
+    "skm_aura": mk("jjk:skm_aura", ADD, 0, 1, 0.5, 0.14, ("#E6FF3C28", "#00780A0A"), accel=(0, 1.5, 0)),
+    "slam_dust": mk("jjk:slam_dust", BLEND, 3, 6, 0.8, 0.3, ("#CCA08C78", "#00A08C78"), 2.5, sphere(0.3),
+                    drag=3, grow=0.3),
+    "worm_spit": mk("jjk:worm_spit", BLEND, 0, 6, 0.4, 0.1, ("#FFA046C8", "#005A1E78"), 1.2, sphere(0.1),
+                    accel=(0, -8, 0)),
+    "cloud_trail": mk("jjk:cloud_trail", ADD, 2, 6, 0.2, 0.25, ("#FFFF6E5A", "#00961E1E"), 4, sphere(0.2),
+                      drag=6, mode="lookat_direction"),
+}
+EFFECTS.update(SKILL_FX)
+
+
 def main():
     atlas()
     d = RP / "particles"

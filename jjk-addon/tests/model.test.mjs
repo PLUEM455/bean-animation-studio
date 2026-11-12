@@ -64,13 +64,12 @@ test('toji worm wraps body', () => {
   const b = readJson('resource_pack/models/entity/toji.geo.json')['minecraft:geometry'][0].bones.find((x) => x.name === 'worm');
   assert.ok(b.cubes.length >= 5);
 });
-test('toji weapons held in right hand, only katana visible', () => {
+test('toji weapons held in right hand, katana shown by default', () => {
   const bones = readJson('resource_pack/models/entity/toji.geo.json')['minecraft:geometry'][0].bones;
   for (const w of WEAPONS) assert.equal(bones.find((x) => x.name === w).parent, 'rightArm', w);
   const rc = readJson('resource_pack/render_controllers/toji.render_controllers.json').render_controllers['controller.render.jjk.toji'];
   const vis = Object.assign({}, ...rc.part_visibility);
-  assert.equal(vis.katana, true);
-  for (const w of WEAPONS.filter((x) => x !== 'katana')) assert.equal(vis[w], false, w);
+  assert.equal(vis.katana, "q.property('jjk:weapon') == 1"); // default weapon value is 1
 });
 
 const LOCATORS = { gojo: ['eye_l', 'eye_r', 'hand_r', 'feet', 'center'], toji: ['hand_r', 'feet', 'center', 'slash'] };

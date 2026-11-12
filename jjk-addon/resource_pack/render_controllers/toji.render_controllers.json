@@ -3,14 +3,30 @@
   "render_controllers": {
     "controller.render.jjk.toji": {
       "geometry": "Geometry.default",
-      "materials": [{ "*": "Material.default" }],
-      "textures": ["Texture.default"],
+      "materials": [
+        {
+          "*": "Material.default"
+        }
+      ],
+      "textures": [
+        "Texture.default"
+      ],
       "part_visibility": [
-        { "katana": true },
-        { "playfulCloud": false },
-        { "spear": false },
-        { "chain": false },
-        { "pistol": false }
+        {
+          "katana": "q.property('jjk:weapon') == 1"
+        },
+        {
+          "playfulCloud": "q.property('jjk:weapon') == 2"
+        },
+        {
+          "spear": "q.property('jjk:weapon') == 3 || q.property('jjk:weapon') == 4"
+        },
+        {
+          "chain": "q.property('jjk:weapon') == 4 || q.property('jjk:weapon') == 5"
+        },
+        {
+          "pistol": "q.property('jjk:weapon') == 6"
+        }
       ]
     }
   }

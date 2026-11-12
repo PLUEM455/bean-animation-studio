@@ -161,6 +161,173 @@ SOUNDS = {  # definition id -> (file stem, recipe, variants)
 }
 
 
+# ---------- skill sounds ----------
+def chord(freqs, sec, decay, amp=0.3):
+    n = int(SR * sec)
+    return sum(np.sin(2 * np.pi * f * t(sec)) for f in freqs) * env(n, 0.01, decay) * amp
+
+
+def g_blue(_):
+    sec = 1.6; n = int(SR * sec)
+    hum = (np.sin(2 * np.pi * 55 * t(sec)) + 0.5 * np.sin(2 * np.pi * 110.7 * t(sec))) * env(n, 0.15, 0.9)
+    suck = lowpass(noise(sec), np.geomspace(3000, 200, n)) * env(n, 0.05, 0.6) * 1.5
+    return finish(hum + suck)
+
+
+def g_red_charge(_):
+    sec = 0.5; n = int(SR * sec)
+    return finish(tone(300, 1500, sec) * np.linspace(0.2, 1, n) * 0.5 + highpass(noise(sec), 3000) * 0.15 * np.linspace(0, 1, n))
+
+
+def boom(sec, pitch=1.0, bright=1500):
+    n = int(SR * sec)
+    return (tone(70 * pitch, 28 * pitch, sec) * env(n, 0.005, 0.35) * 1.3
+            + lowpass(noise(sec), np.geomspace(bright, 120, n)) * env(n, 0.002, 0.3))
+
+
+def g_red_boom(_): return finish(boom(1.3))
+
+
+def g_purple_charge(_):
+    sec = 1.6; n = int(SR * sec)
+    a = tone(220, 660, sec); b = tone(226, 668, sec)  # beating pair = unstable mass
+    return finish((a + b) * np.linspace(0.1, 1, n) * 0.5 + lowpass(noise(sec), 800) * np.linspace(0, 0.6, n))
+
+
+def g_purple_fire(_):
+    sec = 1.8; n = int(SR * sec)
+    roar = lowpass(noise(sec), np.geomspace(6000, 300, n)) * env(n, 0.01, 0.7) * 1.4
+    sub = tone(90, 30, sec) * env(n, 0.01, 0.6) * 1.2
+    whine = tone(1200, 300, sec) * env(n, 0.01, 0.4) * 0.25
+    return finish(roar + sub + whine)
+
+
+def g_domain(_):
+    sec = 2.6; n = int(SR * sec)
+    drone = (np.sin(2 * np.pi * 41 * t(sec)) + 0.6 * np.sin(2 * np.pi * 61.7 * t(sec))) * env(n, 0.4, 1.5)
+    buf = drone * 0.8
+    for i, f0 in enumerate((1318, 1760, 2349, 2637)):
+        place(buf, chord([f0, f0 * 2.01], 1.2, 0.5, 0.18), 0.5 + i * 0.25)
+    return finish(buf)
+
+
+def g_blink(_):
+    sec = 0.22; n = int(SR * sec)
+    return finish(highpass(noise(sec), np.geomspace(800, 7000, n)) * env(n, 0.01, 0.06) + tone(600, 2400, sec) * env(n, 0.005, 0.05) * 0.3, -3)
+
+
+def g_black_flash(_):
+    buf = np.zeros(int(SR * 0.8))
+    place(buf, whoosh(0.12, 3000, 400, peak=0.8) * 0.6, 0)  # reverse-ish rush in
+    crack = highpass(noise(0.05), 2000) * env(int(SR * 0.05), 0.0005, 0.01) * 2
+    place(buf, crack, 0.11)
+    place(buf, boom(0.6, 0.8, 2500), 0.11)
+    return finish(buf)
+
+
+def g_rct(_): return finish(chord([523, 659, 784, 1046], 1.3, 0.6), -4)
+
+
+def g_infinity(v):
+    sec = 0.6; f0 = 2600 + 150 * v
+    return finish(chord([f0, f0 * 1.003, f0 * 2.4], sec, 0.18, 0.4), -5)
+
+
+def t_cloud(v):
+    buf = np.zeros(int(SR * 0.5))
+    place(buf, whoosh(0.22, 300, 1800 + 200 * v) * 0.8, 0)
+    place(buf, thud(0.7, 0.25), 0.18)
+    return finish(buf)
+
+
+def t_slam(_):
+    buf = boom(1.1, 0.8, 900)
+    rattle = highpass(noise(0.8), 1200) * env(int(SR * 0.8), 0.05, 0.2) * 0.25
+    place(buf, rattle, 0.08)
+    return finish(buf)
+
+
+def t_fist(v): return finish(thud(0.95 + 0.1 * v, 0.25), -2)
+
+
+def t_spear(_):
+    buf = np.zeros(int(SR * 0.6))
+    place(buf, whoosh(0.1, 2000, 8000, peak=0.3), 0)
+    place(buf, metal_ring(0.4, 3100) * 0.4, 0.06)
+    place(buf, thud(1.2, 0.2) * 0.6, 0.08)
+    return finish(buf)
+
+
+def t_negate(_):
+    sec = 0.9; buf = np.zeros(int(SR * sec))
+    for _i in range(18):  # shattering glass
+        f0 = rng.uniform(2500, 7500)
+        place(buf, np.sin(2 * np.pi * f0 * t(0.25)) * env(int(SR * 0.25), 0.001, 0.05) * rng.uniform(0.2, 0.5), rng.uniform(0, 0.35))
+    place(buf, highpass(noise(0.4), 4000) * env(int(SR * 0.4), 0.001, 0.08) * 0.6, 0)
+    place(buf, tone(900, 150, 0.6) * env(int(SR * 0.6), 0.01, 0.2) * 0.3, 0.02)
+    return finish(buf)
+
+
+def t_chain_throw(_):
+    buf = np.zeros(int(SR * 0.7))
+    place(buf, whoosh(0.3, 600, 4000) * 0.7, 0)
+    for i in range(6):
+        place(buf, metal_ring(0.12, 2600 + 300 * (i % 3)) * 0.25, 0.05 + i * 0.06)
+    return finish(buf)
+
+
+def t_clink(v): return finish(metal_ring(0.15, 2400 + 380 * v) + highpass(noise(0.15), 5000) * env(int(SR * 0.15), 0.001, 0.01) * 0.3, -4)
+
+
+def t_gun(_):
+    sec = 0.6; n = int(SR * sec)
+    snap = highpass(noise(sec), 1500) * env(n, 0.0005, 0.02) * 1.5
+    body = lowpass(noise(sec), 900) * env(n, 0.001, 0.08) * 1.2 + tone(160, 50, sec) * env(n, 0.001, 0.06)
+    tail = lowpass(noise(sec), 500) * env(n, 0.03, 0.25) * 0.25
+    return finish(snap + body + tail)
+
+
+def t_blitz(_):
+    return finish(whoosh(0.35, 400, 6000, peak=0.25), -2)
+
+
+def t_inventory(_):
+    sec = 0.5; n = int(SR * sec)
+    wob = lowpass(noise(sec), 250 + 200 * np.sin(2 * np.pi * 9 * t(sec)) ** 2) * env(n, 0.03, 0.15) * 2
+    return finish(wob + tone(180, 90, sec) * env(n, 0.05, 0.12) * 0.4, -3)
+
+
+def t_skm(_):
+    sec = 1.4; n = int(SR * sec)
+    growl = lowpass(noise(sec), 350) * (0.6 + 0.4 * np.sin(2 * np.pi * 28 * t(sec))) * env(n, 0.2, 0.8) * 1.8
+    return finish(growl + tone(70, 110, sec) * env(n, 0.2, 0.7) * 0.6)
+
+
+SOUNDS.update({
+    "jjk.gojo.blue": ("gojo_blue", g_blue, 1),
+    "jjk.gojo.red_charge": ("gojo_red_charge", g_red_charge, 1),
+    "jjk.gojo.red_boom": ("gojo_red_boom", g_red_boom, 1),
+    "jjk.gojo.purple_charge": ("gojo_purple_charge", g_purple_charge, 1),
+    "jjk.gojo.purple_fire": ("gojo_purple_fire", g_purple_fire, 1),
+    "jjk.gojo.domain": ("gojo_domain", g_domain, 1),
+    "jjk.gojo.blink": ("gojo_blink", g_blink, 1),
+    "jjk.gojo.black_flash": ("gojo_black_flash", g_black_flash, 1),
+    "jjk.gojo.rct": ("gojo_rct", g_rct, 1),
+    "jjk.gojo.infinity": ("gojo_infinity", g_infinity, 2),
+    "jjk.toji.cloud": ("toji_cloud", t_cloud, 2),
+    "jjk.toji.slam": ("toji_slam", t_slam, 1),
+    "jjk.toji.fist": ("toji_fist", t_fist, 2),
+    "jjk.toji.spear": ("toji_spear", t_spear, 1),
+    "jjk.toji.negate": ("toji_negate", t_negate, 1),
+    "jjk.toji.chain_throw": ("toji_chain_throw", t_chain_throw, 1),
+    "jjk.toji.chain_clink": ("toji_chain_clink", t_clink, 3),
+    "jjk.toji.gun": ("toji_gun", t_gun, 1),
+    "jjk.toji.blitz": ("toji_blitz", t_blitz, 1),
+    "jjk.toji.inventory": ("toji_inventory", t_inventory, 1),
+    "jjk.toji.skm": ("toji_skm", t_skm, 1),
+})
+
+
 def write_ogg(x, out):
     pcm = (np.clip(x, -1, 1) * 32767).astype("<i2")
     with tempfile.NamedTemporaryFile(suffix=".wav") as tmp:
