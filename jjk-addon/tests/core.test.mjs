@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isNatural } from '../behavior_pack/scripts/core/blockRules.js';
-import { chooseGojo, chooseToji, COOLDOWN } from '../behavior_pack/scripts/core/brain.js';
+import { chooseGojo, chooseToji, COOLDOWN, GOJO_SKILLS, TOJI_SKILLS, GLOBAL_GAP } from '../behavior_pack/scripts/core/brain.js';
 import { createRope, stepRope, launchVelocity } from '../behavior_pack/scripts/core/rope.js';
 import { dist } from '../behavior_pack/scripts/core/vec.js';
 
@@ -22,25 +22,31 @@ test('air and unknown modded blocks', () => {
 });
 
 const ready = {};
-const base = { dist: 5, enemies: 1, hp: 1, now: 1000, cd: ready, rand: 0.5 };
-test('gojo: low hp -> purple 200%, crowd -> domain, close -> combo', () => {
-  assert.equal(chooseGojo({ ...base, hp: 0.1 }), 'purple200');
-  assert.equal(chooseGojo({ ...base, enemies: 3 }), 'domain');
-  assert.equal(chooseGojo({ ...base, dist: 2 }), 'combo');
-  assert.ok(['blue', 'red', 'pullPunch'].includes(chooseGojo({ ...base, dist: 7 })));
-  assert.ok(['purple', 'blink'].includes(chooseGojo({ ...base, dist: 18 })));
+const base = { now: 1000, cd: ready, rand: 0.5 };
+const draw = (fn, extra = {}) => {
+  const seen = new Set();
+  for (let i = 0; i < 400; i++) seen.add(fn({ ...base, ...extra, rand: i / 400 }));
+  return seen;
+};
+test('gojo picks any ready skill at random, at any range, including the domain', () => {
+  assert.deepEqual([...draw(chooseGojo)].sort(), [...GOJO_SKILLS].sort());
+  for (const dist of [1, 8, 40]) assert.ok(GOJO_SKILLS.includes(chooseGojo({ ...base, dist, rand: 0.99 })));
 });
-test('gojo: cooldown respected', () => {
-  const cd = { combo: 2000 };
-  assert.equal(chooseGojo({ ...base, dist: 2, cd }), null);
+test('toji picks any ready skill at random', () => {
+  assert.deepEqual([...draw(chooseToji)].sort(), [...TOJI_SKILLS].sort());
 });
-test('toji: cursed target -> spear first; crowd -> chain sweep; mid -> chain aim/gun', () => {
-  assert.equal(chooseToji({ ...base, dist: 3, targetCursed: true }), 'spear');
-  assert.equal(chooseToji({ ...base, dist: 9, targetCursed: true }), 'blitz');
-  assert.equal(chooseToji({ ...base, enemies: 3, dist: 6 }), 'chainSweep');
-  assert.ok(['chainAim', 'gun', 'blitz'].includes(chooseToji({ ...base, dist: 12 })));
-  assert.equal(chooseToji({ ...base, hp: 0.3 }), 'skm');
-  assert.equal(chooseToji({ ...base, hp: 0.3, skm: true, dist: 2 }) !== 'skm', true);
+test('cooldowns are the only limit', () => {
+  const cd = Object.fromEntries(GOJO_SKILLS.filter((k) => k !== 'red').map((k) => [k, 5000]));
+  assert.deepEqual([...draw(chooseGojo, { cd })], ['red']);
+  const all = Object.fromEntries(GOJO_SKILLS.map((k) => [k, 5000]));
+  assert.equal(chooseGojo({ ...base, cd: all }), null);
+});
+test('global gap between skills', () => {
+  assert.equal(chooseGojo({ ...base, gcdUntil: 1010 }), null);
+  assert.ok(GLOBAL_GAP > 0);
+});
+test('sorcerer killer mode is not re-rolled once active', () => {
+  assert.ok(!draw(chooseToji, { skm: true }).has('skm'));
 });
 test('every chosen skill has a cooldown', () => {
   for (const k of ['purple200', 'domain', 'combo', 'blue', 'blueMax', 'red', 'pullPunch', 'blink', 'purple',

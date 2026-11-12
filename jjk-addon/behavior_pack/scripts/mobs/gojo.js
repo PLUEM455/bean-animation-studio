@@ -1,5 +1,5 @@
 // Satoru Gojo — 13 skills (spec: 2026-11-12-jjk-gojo-addon-design.md §4).
-import { chooseGojo, COOLDOWN } from '../core/brain.js';
+import { chooseGojo, COOLDOWN, GLOBAL_GAP } from '../core/brain.js';
 import { add, sub, scale, norm, dist, distToSegment } from '../core/vec.js';
 import { PX, SFX, ANIM } from '../game/ids.js';
 import { px, sfx, anim, line, shell, ring } from '../game/fx.js';
@@ -21,16 +21,15 @@ export function gojoThink(self) {
   if (s.busy) return;
   const target = pickTarget(self, hidden);
   if (!target) return;
-  const skill = chooseGojo({
-    dist: distTo(self, target), enemies: enemies(self, 10).length, hp: hp(self), now: now(), cd: s.cd,
-    rand: Math.random(),
-  });
+  const skill = chooseGojo({ now: now(), cd: s.cd, rand: Math.random(), gcdUntil: s.gcdUntil });
   if (!skill) return;
   const run = SKILLS[skill];
   s.busy = true;
   s.cd[skill] = now() + COOLDOWN[skill];
   face(self, target.location);
-  spawnTask(self, run(self, target), { maxTicks: 400, onEnd: () => { s.busy = false; } });
+  spawnTask(self, run(self, target), {
+    maxTicks: 400, onEnd: () => { s.busy = false; s.gcdUntil = now() + GLOBAL_GAP; },
+  });
 }
 
 /** punch with a chance of Black Flash (×2.5) */
@@ -56,6 +55,7 @@ function* punch(self, target, dmg = 8, forceFlash = false) {
 const SKILLS = {
   /** @param {import('@minecraft/server').Entity} self */
   *combo(self, t) {
+    yield* closeIn(self, t, 4);
     anim(self, A.combo, 0.15);
     for (let i = 0; i < 3; i++) {
       yield 5;
@@ -80,7 +80,8 @@ const SKILLS = {
     if (!t.isValid) return;
     let p = handPos(self);
     const dir = dirTo(p, chest(t));
-    for (let step = 0; step < 24; step++) {
+    const steps = Math.min(48, Math.ceil((dist(p, chest(t)) + 6) / 1.2));
+    for (let step = 0; step < steps; step++) {
       p = add(p, scale(dir, 1.2));
       px(self.dimension, PX.redOrb, p);
       const hitEntity = enemies(self, 30).some((e) => dist(chest(e), p) < 1.6);
@@ -102,6 +103,7 @@ const SKILLS = {
 
   /** @param {import('@minecraft/server').Entity} self */
   *pullPunch(self, t) {
+    yield* closeIn(self, t, 9);
     anim(self, A.pull, 0.15);
     sfx(self.dimension, SFX.blue, t.location, 0.8, 1.4);
     const d = distTo(self, t);
@@ -170,6 +172,13 @@ const SKILLS = {
   },
 };
 
+/** Blink in when a close-range skill was rolled from far away */
+function* closeIn(self, t, reach) {
+  if (!t.isValid || distTo(self, t) <= reach) return;
+  yield* SKILLS.blink(self, t);
+  if (t.isValid) face(self, t.location);
+}
+
 /** Lapse: Blue — pulls everything into one point */
 /** @param {import('@minecraft/server').Entity} self */
 function* blue(self, t, o) {
@@ -216,14 +225,15 @@ function* purple(self, t, o) {
   anim(self, A.purpleFire, 0.2);
   const start = add(self.location, { x: 0, y: 1.4, z: 0 });
   const dir = t.isValid ? dirTo(start, chest(t)) : norm(self.getViewDirection());
+  const reach = Math.max(o.len, t.isValid ? dist(start, chest(t)) + 8 : 0);
   sfx(dim, SFX.purpleFire, start, 4);
   const hit = new Set();
   let broken = 0;
-  for (let seg = 0; seg < o.len; seg += 8) {
-    const a = add(start, scale(dir, seg)), b = add(start, scale(dir, Math.min(o.len, seg + 8)));
+  for (let seg = 0; seg < reach; seg += 8) {
+    const a = add(start, scale(dir, seg)), b = add(start, scale(dir, Math.min(reach, seg + 8)));
     line(dim, PX.purpleBeam, a, b, 0.6, 16);
     px(dim, PX.purpleCore, b);
-    for (const e of enemies(self, o.len + 4)) {
+    for (const e of enemies(self, reach + 4)) {
       if (hit.has(e.id) || distToSegment(chest(e), a, b) > o.r + 0.6) continue;
       hit.add(e.id);
       hurt(self, e, o.dmg);

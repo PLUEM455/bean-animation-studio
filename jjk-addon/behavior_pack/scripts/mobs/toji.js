@@ -1,5 +1,5 @@
 // Toji Fushiguro — 13 skills (spec: 2026-11-12-jjk-toji-mob-design.md §3-5).
-import { chooseToji, COOLDOWN } from '../core/brain.js';
+import { chooseToji, COOLDOWN, GLOBAL_GAP } from '../core/brain.js';
 import { createRope, stepRope, launchVelocity, driveTip } from '../core/rope.js';
 import { add, sub, scale, norm, dist, dot, len, perpY, distToSegment } from '../core/vec.js';
 import { PX, SFX, ANIM, WEAPON } from '../game/ids.js';
@@ -19,12 +19,7 @@ export function tojiThink(self) {
   if (s.busy) return;
   const t = pickTarget(self);
   if (!t) return;
-  let behind = false;
-  try { behind = dot(t.getViewDirection(), dirTo(t.location, self.location)) < -0.4; } catch { /* ignore */ }
-  const skill = chooseToji({
-    dist: distTo(self, t), enemies: enemies(self, 10).length, hp: hp(self), now: now(), cd: s.cd,
-    rand: Math.random(), targetCursed: t.typeId === 'jjk:gojo', targetBehind: behind, skm: s.skm,
-  });
+  const skill = chooseToji({ now: now(), cd: s.cd, rand: Math.random(), gcdUntil: s.gcdUntil, skm: s.skm });
   if (!skill) return;
   s.busy = true;
   s.cd[skill] = now() + Math.round(COOLDOWN[skill] * (s.skm ? 0.7 : 1));
@@ -33,6 +28,7 @@ export function tojiThink(self) {
     maxTicks: 400,
     onEnd: () => {
       s.busy = false;
+      s.gcdUntil = now() + GLOBAL_GAP;
       if (self.isValid && Number(self.getProperty('jjk:chain_len') ?? 0) > 0) endChain(self); // aborted mid-throw
     },
   });
@@ -55,6 +51,7 @@ function* equip(self, w) {
 const SKILLS = {
   /** @param {import('@minecraft/server').Entity} self */
   *katana(self, t) {
+    yield* closeIn(self, t, 4);
     yield* equip(self, WEAPON.katana);
     anim(self, A.katana, 0.1);
     sfx(self.dimension, SFX.katana, self.location);
@@ -68,6 +65,7 @@ const SKILLS = {
 
   /** @param {import('@minecraft/server').Entity} self */
   *cloud(self, t) {
+    yield* closeIn(self, t, 4);
     yield* equip(self, WEAPON.cloud);
     anim(self, A.cloud, 0.1);
     for (const at of [5, 7]) {
@@ -86,7 +84,8 @@ const SKILLS = {
   },
 
   /** @param {import('@minecraft/server').Entity} self */
-  *slam(self) {
+  *slam(self, t) {
+    yield* closeIn(self, t, 4);
     yield* equip(self, WEAPON.cloud);
     anim(self, A.slam, 0.1);
     yield 10;
@@ -106,6 +105,7 @@ const SKILLS = {
 
   /** @param {import('@minecraft/server').Entity} self */
   *fists(self, t) {
+    yield* closeIn(self, t, 3.5);
     yield* equip(self, WEAPON.none);
     anim(self, A.fists, 0.1);
     for (let i = 0; i < 3; i++) {
@@ -120,6 +120,7 @@ const SKILLS = {
 
   /** @param {import('@minecraft/server').Entity} self */
   *spear(self, t) {
+    yield* closeIn(self, t, 4);
     yield* equip(self, WEAPON.spear);
     anim(self, A.spear, 0.1);
     yield 5;
@@ -130,9 +131,9 @@ const SKILLS = {
   },
 
   /** @param {import('@minecraft/server').Entity} self */
-  *chainAim(self, t) { yield* chainAim(self, t); },
+  *chainAim(self, t) { yield* closeIn(self, t, 18); yield* chainAim(self, t); },
   /** @param {import('@minecraft/server').Entity} self */
-  *chainSweep(self) { yield* chainSweep(self); },
+  *chainSweep(self, t) { yield* closeIn(self, t, 18); yield* chainSweep(self); },
 
   /** @param {import('@minecraft/server').Entity} self */
   *gun(self, t) {
@@ -210,6 +211,13 @@ const SKILLS = {
     for (let i = 0; i < 8; i++) { ring(self.dimension, PX.skm, add(self.location, { x: 0, y: 0.2 + i * 0.25, z: 0 }), 0.9, 10); yield 2; }
   },
 };
+
+/** Speed-blitz in when a close-range skill was rolled from far away */
+function* closeIn(self, t, reach) {
+  if (!t.isValid || distTo(self, t) <= reach) return;
+  yield* SKILLS.blitz(self, t);
+  if (t.isValid) face(self, t.location);
+}
 
 /** Inverted Spear of Heaven: strips buffs; switches Gojo's Infinity off for 6 s */
 /** @param {import('@minecraft/server').Entity} self */
