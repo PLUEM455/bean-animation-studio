@@ -11,6 +11,11 @@ export const PX = {
   slash: 'jjk:toji_slash', chainLink: 'jjk:chain_link', spearTip: 'jjk:spear_tip', negate: 'jjk:negate',
   muzzle: 'jjk:muzzle', tracer: 'jjk:tracer', afterimage: 'jjk:afterimage', skm: 'jjk:skm_aura',
   slamDust: 'jjk:slam_dust', wormSpit: 'jjk:worm_spit', cloudTrail: 'jjk:cloud_trail',
+  blueCore: 'jjk:blue_core', beamCore: 'jjk:beam_core', voidFog: 'jjk:void_fog',
+  boltBlack: 'jjk:lightning_black', boltRed: 'jjk:lightning_red', boltPurple: 'jjk:lightning_purple',
+  flash: 'jjk:flash', flashBig: 'jjk:flash_big', sparks: 'jjk:sparks', smokeBig: 'jjk:smoke_big',
+  fireball: 'jjk:fireball', speedLine: 'jjk:speed_line', ember: 'jjk:ember',
+  shockwave: 'jjk:shockwave', shockBlue: 'jjk:shock_blue', shockRed: 'jjk:shock_red', shockPurple: 'jjk:shock_purple',
 };
 
 export const SFX = {

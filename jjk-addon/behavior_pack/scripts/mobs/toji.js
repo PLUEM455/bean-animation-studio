@@ -3,7 +3,7 @@ import { chooseToji, COOLDOWN, GLOBAL_GAP } from '../core/brain.js';
 import { createRope, stepRope, launchVelocity, driveTip } from '../core/rope.js';
 import { add, sub, scale, norm, dist, dot, len, perpY, distToSegment } from '../core/vec.js';
 import { PX, SFX, ANIM, WEAPON } from '../game/ids.js';
-import { px, sfx, anim, line, ring } from '../game/fx.js';
+import { px, sfx, anim, line, ring, impact, bolts, shake } from '../game/fx.js';
 import { spawnTask } from '../game/tasks.js';
 import {
   state, now, enemies, pickTarget, hurt, knock, face, breakSphere, safeTeleport,
@@ -58,7 +58,7 @@ const SKILLS = {
     yield 5;
     if (t.isValid && distTo(self, t) <= 4.5) {
       hurt(self, t, 14, 'pierce'); // Split Soul: ignores armour
-      px(self.dimension, PX.slash, chest(t));
+      slashFx(self.dimension, chest(t), 0.6);
     }
     yield 6;
   },
@@ -74,9 +74,10 @@ const SKILLS = {
       face(self, t.location);
       sfx(self.dimension, SFX.cloud, self.location);
       px(self.dimension, PX.cloudTrail, handPos(self));
+      line(self.dimension, PX.cloudTrail, handPos(self), chest(t), 0.8, 6);
       if (distTo(self, t) <= 4.5) {
         hurt(self, t, 12);
-        px(self.dimension, PX.slamDust, chest(t));
+        impact(self.dimension, chest(t), { flash: PX.flash, ring: PX.shockwave, sparks: PX.sparks, extra: [PX.slamDust], shake: 0.9 });
         knock(t, dirTo(self.location, t.location), 1.8, 0.35);
       }
     }
@@ -92,8 +93,9 @@ const SKILLS = {
     const f = self.getViewDirection();
     const c = add(self.location, scale(norm({ x: f.x, y: 0, z: f.z }), 2));
     sfx(self.dimension, SFX.slam, c, 2);
-    ring(self.dimension, PX.slamDust, add(c, { x: 0, y: 0.2, z: 0 }), 1.5, 10);
-    ring(self.dimension, PX.slamDust, add(c, { x: 0, y: 0.2, z: 0 }), 3, 16);
+    impact(self.dimension, add(c, { x: 0, y: 0.6, z: 0 }), { flash: PX.flashBig, ring: PX.shockwave, sparks: PX.sparks,
+      smoke: PX.smokeBig, extra: [PX.debris, PX.slamDust], shake: 2.4, radius: 24 });
+    for (const r of [1.5, 3, 4.5]) ring(self.dimension, PX.slamDust, add(c, { x: 0, y: 0.2, z: 0 }), r, Math.round(r * 7));
     for (const e of enemies(self, 8)) {
       if (dist(e.location, c) > 3.5) continue;
       hurt(self, e, 12);
@@ -113,6 +115,7 @@ const SKILLS = {
       if (!t.isValid || distTo(self, t) > 4) return;
       hurt(self, t, 9);
       sfx(self.dimension, SFX.fist, chest(t));
+      impact(self.dimension, chest(t), { flash: PX.flash, sparks: PX.gojoHit, ring: i === 2 ? PX.shockwave : undefined, shake: i === 2 ? 0.8 : 0.3 });
       if (i === 2) knock(t, dirTo(self.location, t.location), 1.5, 0.4);
     }
     yield 5;
@@ -144,7 +147,7 @@ const SKILLS = {
       if (!t.isValid) return;
       face(self, t.location);
       const from = handPos(self), to = chest(t), d = dist(from, to), dir = dirTo(from, to);
-      px(self.dimension, PX.muzzle, from);
+      impact(self.dimension, from, { flash: PX.flash, extra: [PX.muzzle, PX.smokeBig], shake: 0.3, radius: 8 });
       sfx(self.dimension, SFX.gun, from, 1.6);
       let blocked;
       try {
@@ -153,10 +156,11 @@ const SKILLS = {
       } catch { blocked = undefined; }
       if (blocked) {
         const hitAt = add(blocked.block.location, blocked.faceLocation);
-        line(self.dimension, PX.tracer, from, hitAt, 1, 24);
-        px(self.dimension, PX.muzzle, hitAt);
+        line(self.dimension, PX.tracer, from, hitAt, 0.5, 40);
+        impact(self.dimension, hitAt, { sparks: PX.sparks, extra: [PX.debris] });
       } else {
-        line(self.dimension, PX.tracer, from, to, 1, 24);
+        line(self.dimension, PX.tracer, from, to, 0.5, 40);
+        impact(self.dimension, to, { sparks: PX.sparks, extra: [PX.gojoHit] });
         hurt(self, t, 6, 'projectile');
       }
       yield 5;
@@ -175,7 +179,9 @@ const SKILLS = {
       const side = scale(perpY(toward), hop % 2 ? 1.6 : -1.6);
       const dest = add(self.location, add(scale(toward, Math.min(4.5, d - 1.8)), side));
       afterimage(self);
+      const was = chest(self);
       if (!safeTeleport(self, dest, t.location)) safeTeleport(self, add(self.location, scale(toward, Math.min(3, d - 1.8))), t.location);
+      line(self.dimension, PX.speedLine, was, chest(self), 0.35, 20);
       yield 2;
     }
     yield 2;
@@ -193,7 +199,8 @@ const SKILLS = {
     yield 4;
     if (!t.isValid) return;
     hurt(self, t, 28, 'pierce'); // ×2 from behind
-    px(self.dimension, PX.slash, chest(t));
+    slashFx(self.dimension, chest(t), 1.2);
+    bolts(self.dimension, [PX.boltRed], chest(t), 3, 2);
     sfx(self.dimension, SFX.katana, chest(t), 1.3, 0.8);
     yield 6;
   },
@@ -208,9 +215,19 @@ const SKILLS = {
       self.addEffect('speed', 20000, { amplifier: 1, showParticles: false });
       self.addEffect('strength', 20000, { amplifier: 1, showParticles: false });
     } catch { /* ignore */ }
-    for (let i = 0; i < 8; i++) { ring(self.dimension, PX.skm, add(self.location, { x: 0, y: 0.2 + i * 0.25, z: 0 }), 0.9, 10); yield 2; }
+    impact(self.dimension, chest(self), { flash: PX.flashBig, ring: PX.shockRed, smoke: PX.smokeBig, shake: 2, radius: 24 });
+    for (let i = 0; i < 10; i++) {
+      ring(self.dimension, PX.skm, add(self.location, { x: 0, y: 0.2 + i * 0.22, z: 0 }), 1.1 - i * 0.05, 14);
+      px(self.dimension, PX.ember, chest(self));
+      yield 2;
+    }
   },
 };
+
+/** sword hit: two crossing arcs + flash + sparks */
+function slashFx(dim, at, shakeAmt) {
+  impact(dim, at, { flash: PX.flash, sparks: PX.sparks, extra: [PX.slash, PX.slash], shake: shakeAmt, radius: 12 });
+}
 
 /** Speed-blitz in when a close-range skill was rolled from far away */
 function* closeIn(self, t, reach) {
@@ -228,13 +245,15 @@ function negate(self, t) {
     g.infinityOffUntil = now() + 120;
     g.domainUntil = 0;
   }
-  px(self.dimension, PX.negate, chest(t));
+  impact(self.dimension, chest(t), { flash: PX.flashBig, ring: PX.shockPurple, sparks: PX.sparks, extra: [PX.negate, PX.infinity], shake: 1.4 });
+  bolts(self.dimension, [PX.boltPurple, PX.boltBlack], chest(t), 6, 3);
   sfx(self.dimension, SFX.negate, chest(t), 1.5);
 }
 
 /** @param {import('@minecraft/server').Entity} self */
 function afterimage(self) {
-  for (let y = 0.2; y < 2; y += 0.3) px(self.dimension, PX.afterimage, add(self.location, { x: 0, y, z: 0 }));
+  for (let y = 0.15; y < 2; y += 0.25) px(self.dimension, PX.afterimage, add(self.location, { x: 0, y, z: 0 }));
+  px(self.dimension, PX.slamDust, self.location);
 }
 
 /** @param {import('@minecraft/server').Entity} self */
@@ -246,8 +265,8 @@ function endChain(self) {
 /** draw chain links + spear head */
 /** @param {import('@minecraft/server').Dimension} dim */
 function drawChain(dim, rope) {
-  const pts = rope.points, step = Math.max(1, Math.floor(pts.length / 14));
-  for (let i = 1; i < pts.length - 1; i += step) px(dim, PX.chainLink, pts[i].p);
+  const pts = rope.points;
+  for (let i = 1; i < pts.length; i++) line(dim, PX.chainLink, pts[i - 1].p, pts[i].p, 0.45, 4); // links between points
   px(dim, PX.spearTip, pts.at(-1).p);
 }
 
@@ -302,7 +321,7 @@ function* chainAim(self, t) {
       hit.add(e.id);
       hurt(self, e, 12, 'pierce');
       knock(e, tip.v, 0.6, 0.15); // pushed along the spear's path, never toward Toji
-      px(dim, PX.slash, tip.p);
+      slashFx(dim, tip.p, 0.8);
       if (e.typeId === 'jjk:gojo') negate(self, e);
     }
     const slow = len(tip.v) < 2 && dist(tip.p, h) >= rope.maxLen - 0.2;
@@ -352,7 +371,7 @@ function* chainSweep(self) {
       lastHit.set(e.id, swept);
       hurt(self, e, 12, 'pierce');
       knock(e, sub(e.location, h), 1.0, 0.3); // flung outward, never pulled in
-      px(dim, PX.slash, c);
+      slashFx(dim, c, 0.6);
     }
     yield 1;
   }
@@ -365,7 +384,8 @@ function* chainSweep(self) {
 export function tojiPassives(self) {
   const s = state(self);
   if (s.skm) {
-    ring(self.dimension, PX.skm, add(self.location, { x: 0, y: 0.1, z: 0 }), 0.7, 6);
+    ring(self.dimension, PX.skm, add(self.location, { x: 0, y: 0.1, z: 0 }), 0.8, 10);
+    px(self.dimension, PX.ember, chest(self));
   }
 }
 

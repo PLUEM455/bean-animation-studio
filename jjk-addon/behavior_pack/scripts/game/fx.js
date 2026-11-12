@@ -40,3 +40,55 @@ export function ring(dim, id, c, r, n) {
     px(dim, id, { x: c.x + Math.cos(a) * r, y: c.y, z: c.z + Math.sin(a) * r });
   }
 }
+
+/**
+ * Camera shake for players near `loc` (vanilla /camerashake, stable).
+ * @param {import('@minecraft/server').Dimension} dim
+ */
+export function shake(dim, loc, radius, intensity, seconds) {
+  const p = (n) => n.toFixed(1);
+  try {
+    dim.runCommand(`camerashake add @a[x=${p(loc.x)},y=${p(loc.y)},z=${p(loc.z)},r=${radius}] ` +
+      `${Math.min(4, intensity).toFixed(2)} ${seconds.toFixed(2)} positional`);
+  } catch { /* ignore */ }
+}
+
+/**
+ * Jagged lightning bolt: `segs` kinked segments from `from` toward `dir`.
+ * @param {import('@minecraft/server').Dimension} dim
+ */
+export function bolt(dim, id, from, dir, length, segs = 7, jitter = 0.7) {
+  let a = from;
+  for (let i = 1; i <= segs; i++) {
+    const t = (length * i) / segs;
+    const b = {
+      x: from.x + dir.x * t + (Math.random() - 0.5) * jitter,
+      y: from.y + dir.y * t + (Math.random() - 0.5) * jitter,
+      z: from.z + dir.z * t + (Math.random() - 0.5) * jitter,
+    };
+    line(dim, id, a, b, 0.18, 10);
+    a = b;
+  }
+}
+
+/** n bolts bursting out of loc in random directions */
+export function bolts(dim, ids, loc, n, length) {
+  for (let i = 0; i < n; i++) {
+    const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u);
+    bolt(dim, ids[i % ids.length], loc, { x: r * Math.cos(th), y: u, z: r * Math.sin(th) }, length * (0.6 + Math.random() * 0.6));
+  }
+}
+
+/**
+ * Layered hit: flash + shockwave ring + sparks (+ optional smoke / extra particles) + shake.
+ * @param {import('@minecraft/server').Dimension} dim
+ * @param {{flash?: string, ring?: string, sparks?: string, smoke?: string, extra?: string[], shake?: number, radius?: number}} o
+ */
+export function impact(dim, loc, o) {
+  if (o.flash) px(dim, o.flash, loc);
+  if (o.ring) px(dim, o.ring, { x: loc.x, y: loc.y - 0.6, z: loc.z });
+  if (o.sparks) px(dim, o.sparks, loc);
+  if (o.smoke) px(dim, o.smoke, loc);
+  for (const id of o.extra ?? []) px(dim, id, loc);
+  if (o.shake) shake(dim, loc, o.radius ?? 16, o.shake, 0.25 + o.shake * 0.15);
+}
