@@ -1,7 +1,7 @@
 // Real Darkness — behavior script
-// Fog is fully automatic: visibility comes from sky light (sun/moon, moon phase, special
-// days/nights, how exposed the player is to the sky) and from nearby light sources
-// (distance to the nearest one and how many there are).
+// Fog is fully automatic. Daylight under open sky: no fog. Night and caves: fog width comes
+// only from nearby light sources (their strength, distance and how many there are).
+// Moon phase and special days/nights only change the fog colour.
 import { world, system, EquipmentSlot, PlayerPermissionLevel, BlockPermutation, BlockTypes, BlockVolume, MoonPhase } from "@minecraft/server";
 import { ModalFormData } from "@minecraft/server-ui";
 
@@ -36,19 +36,22 @@ const LIGHT_ITEMS = {
   "minecraft:magma": 3,
 };
 
-// Light-emitting placed blocks (all count, lava and fire included). Unknown ids are dropped at load.
-const LIGHT_BLOCKS = [
-  "minecraft:torch", "minecraft:soul_torch", "minecraft:redstone_torch", "minecraft:copper_torch",
-  "minecraft:lantern", "minecraft:soul_lantern", "minecraft:glowstone", "minecraft:sea_lantern",
-  "minecraft:shroomlight", "minecraft:lit_pumpkin", "minecraft:beacon", "minecraft:campfire",
-  "minecraft:soul_campfire", "minecraft:lava", "minecraft:flowing_lava", "minecraft:fire",
-  "minecraft:soul_fire", "minecraft:end_rod", "minecraft:ochre_froglight", "minecraft:verdant_froglight",
-  "minecraft:pearlescent_froglight", "minecraft:crying_obsidian", "minecraft:magma", "minecraft:glow_lichen",
-  "minecraft:lit_furnace", "minecraft:lit_blast_furnace", "minecraft:lit_smoker", "minecraft:lit_redstone_lamp",
-  "minecraft:respawn_anchor", "minecraft:conduit", "minecraft:sea_pickle", "minecraft:cave_vines_head_with_berries",
-  "minecraft:cave_vines_body_with_berries", "minecraft:enchanting_table", "minecraft:ender_chest",
-  "minecraft:brewing_stand", "minecraft:amethyst_cluster", "minecraft:candle", "minecraft:lit_candle",
-].filter((id) => { try { return !!BlockTypes.get(id); } catch (e) { return false; } });
+// Light-emitting placed blocks and their vanilla light levels (lava and fire included).
+// Unknown ids are dropped at load.
+const LIGHT_LEVELS = Object.fromEntries(Object.entries({
+  "minecraft:torch": 14, "minecraft:soul_torch": 10, "minecraft:redstone_torch": 7, "minecraft:copper_torch": 14,
+  "minecraft:lantern": 15, "minecraft:soul_lantern": 10, "minecraft:glowstone": 15, "minecraft:sea_lantern": 15,
+  "minecraft:shroomlight": 15, "minecraft:lit_pumpkin": 15, "minecraft:beacon": 15, "minecraft:campfire": 15,
+  "minecraft:soul_campfire": 10, "minecraft:lava": 15, "minecraft:flowing_lava": 15, "minecraft:fire": 15,
+  "minecraft:soul_fire": 10, "minecraft:end_rod": 14, "minecraft:ochre_froglight": 15, "minecraft:verdant_froglight": 15,
+  "minecraft:pearlescent_froglight": 15, "minecraft:crying_obsidian": 10, "minecraft:magma": 3, "minecraft:glow_lichen": 7,
+  "minecraft:lit_furnace": 13, "minecraft:lit_blast_furnace": 13, "minecraft:lit_smoker": 13, "minecraft:lit_redstone_lamp": 15,
+  "minecraft:respawn_anchor": 15, "minecraft:conduit": 15, "minecraft:sea_pickle": 6,
+  "minecraft:cave_vines_head_with_berries": 14, "minecraft:cave_vines_body_with_berries": 14,
+  "minecraft:enchanting_table": 7, "minecraft:ender_chest": 7, "minecraft:amethyst_cluster": 5,
+}).filter(([id]) => { try { return !!BlockTypes.get(id); } catch (e) { return false; } }));
+const LIGHT_BLOCKS = Object.keys(LIGHT_LEVELS);
+const MAX_SOURCES = 64; // cap per scan (e.g. lava lakes) to keep it light
 
 // ---------- settings (world-wide) ----------
 function getSettings() {
@@ -140,67 +143,77 @@ function worldState() {
 }
 
 // ---------- automatic fog ----------
-// Brightness of the sky (sun/moon) for the current state, 0..1.
-const NIGHT_SKY = { new: 0.0, crescent: 0.04, quarter: 0.09, gibbous: 0.14, full: 0.2, super: 0.3, micro: 0.12, blood: 0.02, honey: 0.2, loykrathong: 0.35 };
-const ECLIPSE_SKY = { eclipse_total_1: 0.6, eclipse_total_2: 0.3, eclipse_total_3: 0.02, eclipse_annular_1: 0.8, eclipse_annular_2: 0.6, eclipse_annular_3: 0.45 };
-const STATE_SKY = { day: 1.0, golden: 0.45, halo: 0.9, haze: 0.4 };
+// Day under open sky: no fog. Night, caves and total-eclipse peak: width depends ONLY on
+// light sources — with none, darkness closes in right next to the player.
+// Moon/special nights/days only change the fog colour.
 const NIGHT_TINT = { blood: "blood", honey: "honey", loykrathong: "loykrathong" };
 const STATE_TINT = { golden: "golden", halo: "halo", haze: "haze", eclipse: "eclipse" };
+const DAY_KINDS = ["day", "golden", "halo", "haze", "eclipse"];
 
-// Fog end distances (must match tools/make_fogs.py). Last step = no fog.
-const FOG_STEPS = [6, 8, 10, 13, 16, 20, 25, 32, 40, 50, 64, 80, 96];
+// Fog end distances (must match tools/make_fogs.py). Index NO_FOG = no fog.
+const FOG_STEPS = [2, 3, 4, 5, 6, 8, 10, 13, 16, 20, 25, 32, 40, 50, 64];
 const NO_FOG = FOG_STEPS.length;
+const TINT_STEP = 13; // daytime colour-only fog (golden hour, halo, haze, eclipse ramp)
 
-function skyBrightness(st) {
-  if (st.kind === "night") return NIGHT_SKY[st.profile] ?? 0.3;
-  if (st.kind === "eclipse") return ECLIPSE_SKY[st.profile] ?? 0.5;
-  return STATE_SKY[st.kind] ?? 1.0;
-}
-
-// Light sources near the player: nearest distance and count (held items of all players count too).
+// Light sources near the player: list of { d, level } (held light items of all players count too).
 function nearbyLights(player) {
   const loc = player.location;
-  let nearest = Infinity;
-  let count = 0;
+  const sources = [];
   const from = { x: Math.floor(loc.x) - SCAN_RADIUS, y: Math.floor(loc.y) - SCAN_HEIGHT, z: Math.floor(loc.z) - SCAN_RADIUS };
   const to = { x: Math.floor(loc.x) + SCAN_RADIUS, y: Math.floor(loc.y) + SCAN_HEIGHT, z: Math.floor(loc.z) + SCAN_RADIUS };
   try {
     const list = player.dimension.getBlocks(new BlockVolume(from, to), { includeTypes: LIGHT_BLOCKS });
     for (const p of list.getBlockLocationIterator()) {
       const d = Math.hypot(p.x + 0.5 - loc.x, p.y + 0.5 - loc.y, p.z + 0.5 - loc.z);
-      if (d <= SCAN_RADIUS) { count++; if (d < nearest) nearest = d; }
+      const level = LIGHT_LEVELS[player.dimension.getBlock(p)?.typeId ?? ""] ?? 0;
+      if (level > d) sources.push({ d, level });
+      if (sources.length >= MAX_SOURCES) break;
     }
   } catch (e) { /* unloaded area */ }
   for (const other of world.getAllPlayers()) {
-    if (other.dimension.id !== player.dimension.id || heldItem(other).level <= 0) continue;
+    if (other.dimension.id !== player.dimension.id) continue;
+    const level = heldItem(other).level;
+    if (level <= 0) continue;
     const d = other.id === player.id ? 0 : Math.hypot(other.location.x - loc.x, other.location.y - loc.y, other.location.z - loc.z);
-    if (d <= SCAN_RADIUS) { count++; if (d < nearest) nearest = d; }
+    if (level > d) sources.push({ d, level });
   }
-  return { nearest, count };
+  return sources;
 }
 
-// Raw visibility 0..1 for a player right now (before smoothing).
-function rawVisibility(player, st) {
-  let sky = 0;
-  try { sky = player.dimension.getSkyLightLevel(player.getHeadLocation()); } catch (e) { /* out of world */ }
-  const skyVis = skyBrightness(st) * Math.min(1, sky / 12);
-  const { nearest, count } = nearbyLights(player);
-  const closeness = nearest === Infinity ? 0 : Math.max(0, 1 - nearest / SCAN_RADIUS);
-  const amount = Math.min(1, count / 10);
-  const lightVis = Math.pow(closeness, 1.5) * (0.35 + 0.65 * amount);
-  return 1 - (1 - skyVis) * (1 - lightVis);
+function skyLight(player) {
+  try { return player.dimension.getSkyLightLevel(player.getHeadLocation()); } catch (e) { return 0; }
 }
 
-// Visibility -> fog step (curve keeps dark places narrow; NO_FOG only when really bright).
+// Is the player in daylight (day state, under open sky, not at the dark peak of a total eclipse)?
+function inDaylight(player, st) {
+  if (!DAY_KINDS.includes(st.kind)) return false;
+  if (st.profile === "eclipse_total_3") return false;
+  return skyLight(player) >= 12;
+}
+
+// Visibility 0..1 from light sources only: brightness reaching the player (like the game's
+// light: level minus distance) plus a bonus for how many sources are around.
+function rawVisibility(player) {
+  const sources = nearbyLights(player);
+  if (!sources.length) return 0;
+  let best = 0;
+  let total = 0;
+  for (const { d, level } of sources) {
+    const c = Math.max(0, (level - d) / 15);
+    best = Math.max(best, c);
+    total += c;
+  }
+  const amount = Math.min(1, (total - best) / 4); // extra sources beyond the strongest
+  return Math.min(1, Math.pow(best, 1.3) * (0.6 + 0.4 * amount));
+}
+
 function stepFor(vis) {
   if (vis >= 0.97) return NO_FOG;
-  return Math.min(NO_FOG - 1, Math.max(0, Math.round(Math.pow(vis, 1.3) * (NO_FOG - 1))));
+  return Math.min(NO_FOG - 1, Math.max(0, Math.round(Math.pow(vis, 1.5) * (NO_FOG - 1))));
 }
 
 function fogTint(st, player) {
-  let sky = 0;
-  try { sky = player.dimension.getSkyLightLevel(player.getHeadLocation()); } catch (e) { /* ignore */ }
-  if (sky < 5) return "black"; // caves: plain darkness
+  if (skyLight(player) < 5) return "black"; // caves: plain darkness
   if (st.kind === "night") return NIGHT_TINT[st.profile] ?? "black";
   return STATE_TINT[st.kind] ?? "black";
 }
@@ -215,13 +228,15 @@ function updateFog(player, s, st) {
   let step = NO_FOG;
   let vis = 1;
   if (s.fog && player.dimension.id === "minecraft:overworld") {
-    const raw = rawVisibility(player, st);
+    const daylight = inDaylight(player, st);
+    const raw = daylight ? 1 : rawVisibility(player);
     vis = prev ? prev.vis + (raw - prev.vis) * 0.35 : raw;
-    const target = stepFor(vis);
-    const exact = Math.pow(Math.min(vis, 0.999), 1.3) * (NO_FOG - 1);
+    let target = daylight ? NO_FOG : stepFor(vis);
+    if (daylight && STATE_TINT[st.kind] && skyLight(player) >= 5) target = TINT_STEP; // colour only
+    const exact = Math.pow(Math.min(vis, 0.999), 1.5) * (NO_FOG - 1);
     step = !prev ? target
-      : target === prev.step || (target !== NO_FOG && prev.step !== NO_FOG && Math.abs(exact - prev.step) < 0.6) ? prev.step
-      : prev.step + Math.sign(target - prev.step);
+      : target === prev.step || (!daylight && target !== NO_FOG && prev.step !== NO_FOG && Math.abs(exact - prev.step) < 0.6) ? prev.step
+      : prev.step + Math.sign(target - prev.step) * (Math.abs(target - prev.step) > 4 ? 2 : 1); // big gaps close a bit faster
     if (step < NO_FOG) want = `${NS}:${fogTint(st, player)}_${step}`;
   }
   if (prev && prev.id === want) { prev.vis = vis; prev.step = step; return; }
@@ -247,8 +262,8 @@ system.runInterval(() => {
   }
 }, 1);
 
-// ---------- held light (head + 4 points ~4 blocks away) ----------
-const OFFSETS = [[0, 0], [4, 0], [-4, 0], [0, 4], [0, -4]];
+// ---------- held light (one point at the player's head, like a real torch) ----------
+const OFFSETS = [[0, 0]];
 const placed = new Map();      // player.id -> { dim, level, base, blocks: [{x,y,z}] }
 const extinguished = new Map(); // player.id -> item signature at the time the light went out
 
@@ -339,8 +354,8 @@ system.afterEvents.scriptEventReceive.subscribe(({ id, sourceEntity }) => {
     const p = sourceEntity?.typeId === "minecraft:player" ? /** @type {import("@minecraft/server").Player} */ (sourceEntity) : undefined;
     let extra = "";
     if (p) {
-      const { nearest, count } = nearbyLights(p);
-      extra = ` sky=${p.dimension.getSkyLightLevel(p.getHeadLocation())} lights=${count} nearest=${nearest === Infinity ? "-" : nearest.toFixed(1)}` +
+      const src = nearbyLights(p);
+      extra = ` sky=${skyLight(p)} daylight=${inDaylight(p, st)} lights=${src.length} vis=${rawVisibility(p).toFixed(2)}` +
         ` step=${fogState.get(p.id)?.step ?? "-"} fogStack=[${p.fogSettings.getStack().join(", ")}]`;
     }
     const msg = `[RealDarkness] time=${world.getTimeOfDay()} day=${world.getDay()} state=${st.kind} ${st.profile} ` +

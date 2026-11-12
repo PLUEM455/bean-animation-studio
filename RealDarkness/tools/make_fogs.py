@@ -1,10 +1,10 @@
-"""Generate automatic-fog definitions: 8 tints x 13 visibility steps.
+"""Generate automatic-fog definitions: 8 tints x 15 visibility steps.
 Steps must match FOG_STEPS in RealDarkness_BP/scripts/main.js. Run: python3 tools/make_fogs.py"""
 import json, os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "RealDarkness_RP", "fogs")
-STEPS = [6, 8, 10, 13, 16, 20, 25, 32, 40, 50, 64, 80, 96]
+STEPS = [2, 3, 4, 5, 6, 8, 10, 13, 16, 20, 25, 32, 40, 50, 64]
 TINTS = {
     "black": "#000000",        # darkness / caves / normal nights
     "blood": "#2a0200",        # blood moon (lunar eclipse)
@@ -21,7 +21,7 @@ for f in os.listdir(OUT):
     os.remove(os.path.join(OUT, f))
 for tint, color in TINTS.items():
     for i, end in enumerate(STEPS):
-        layer = {"fog_start": round(end * 0.15, 1), "fog_end": end, "fog_color": color, "render_distance_type": "fixed"}
+        layer = {"fog_start": 0 if end <= 6 else round(end * 0.15, 1), "fog_end": end, "fog_color": color, "render_distance_type": "fixed"}
         data = {"format_version": "1.16.100", "minecraft:fog_settings": {
             "description": {"identifier": f"realdarkness:{tint}_{i}"},
             "distance": {"air": layer, "weather": layer}}}

@@ -72,3 +72,10 @@ Sun/moon toggle in the menu: not possible — no script API swaps textures at ru
 - Darker sky values (full moon 0.2, new 0), light term `closeness^1.5 × (0.35 + 0.65 × count/10)`, step = `vis^1.3 × 12`.
 - Smoothing: EMA 0.35 per update, max one step per update, dead zone 0.6 step.
 - Packs 1.3.1.
+
+## Revision 6 (2026-11-12) — light-only darkness
+- Daylight (day states, sky light ≥ 12, not total-eclipse peak): no fog; golden hour / halo / haze / eclipse ramp show colour-only fog at 50 blocks.
+- Night, caves, total-eclipse peak: width from light sources only. Each source gives c = (level − distance)/15; vis = best^1.3 × (0.6 + 0.4 × min(1, (Σc − best)/4)); step = vis^1.5 × 14 over [2 … 64] blocks. No light → 2 blocks. Moon/special nights only set the colour.
+- Smoothing as before, but gaps > 4 steps move 2 steps per update.
+- Held light back to a single light block at the head (no four-corner pattern).
+- Packs 1.4.0.
