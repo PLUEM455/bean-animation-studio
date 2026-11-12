@@ -1,0 +1,611 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.jjk.gojo.idle": {
+      "loop": true,
+      "animation_length": 4,
+      "bones": {
+        "waist": {
+          "rotation": [
+            "math.sin(q.anim_time * 90 + 0) * 0.8",
+            0,
+            0
+          ]
+        },
+        "head": {
+          "rotation": [
+            "math.sin(q.anim_time * 90 + 60) * 1.2",
+            "math.sin(q.anim_time * 45 + 0) * 3",
+            0
+          ]
+        },
+        "rightArm": {
+          "rotation": [
+            "math.sin(q.anim_time * 90 + 30) * 2",
+            0,
+            "3 + math.sin(q.anim_time * 90 + 0) * 1.5"
+          ]
+        },
+        "leftArm": {
+          "rotation": [
+            "math.sin(q.anim_time * 90 + 210) * 2",
+            0,
+            "-3 + math.sin(q.anim_time * 90 + 0) * -1.5"
+          ]
+        },
+        "hair": {
+          "rotation": [
+            0,
+            0,
+            "math.sin(q.anim_time * 180 + 0) * 1"
+          ]
+        },
+        "belt": {
+          "rotation": [
+            "math.sin(q.anim_time * 90 + 0) * 2",
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "animation.jjk.gojo.walk": {
+      "loop": true,
+      "animation_length": 1,
+      "anim_time_update": "q.anim_time + q.delta_time * math.clamp(q.ground_speed / 2.2, 0.6, 1.5)",
+      "bones": {
+        "rightLeg": {
+          "rotation": [
+            "math.sin(q.anim_time * 360 + 0) * 30",
+            0,
+            0
+          ]
+        },
+        "leftLeg": {
+          "rotation": [
+            "math.sin(q.anim_time * 360 + 0) * -30",
+            0,
+            0
+          ]
+        },
+        "rightArm": {
+          "rotation": [
+            "math.sin(q.anim_time * 360 + 0) * -24",
+            0,
+            0
+          ]
+        },
+        "leftArm": {
+          "rotation": [
+            "math.sin(q.anim_time * 360 + 0) * 24",
+            0,
+            0
+          ]
+        },
+        "waist": {
+          "rotation": [
+            2,
+            "math.sin(q.anim_time * 360 + 0) * 4",
+            0
+          ]
+        },
+        "root": {
+          "position": [
+            0,
+            "math.abs(math.sin(q.anim_time * 360)) * 0.5",
+            0
+          ]
+        },
+        "hair": {
+          "rotation": [
+            "math.sin(q.anim_time * 720 + 0) * 2",
+            0,
+            0
+          ]
+        },
+        "belt": {
+          "rotation": [
+            "math.sin(q.anim_time * 720 + 0) * 4",
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "animation.jjk.gojo.run": {
+      "loop": true,
+      "animation_length": 1,
+      "anim_time_update": "q.anim_time + q.delta_time * math.clamp(q.ground_speed / 3.0, 1.0, 2.2)",
+      "bones": {
+        "rightLeg": {
+          "rotation": [
+            "math.sin(q.anim_time * 360 + 0) * 50",
+            0,
+            0
+          ]
+        },
+        "leftLeg": {
+          "rotation": [
+            "math.sin(q.anim_time * 360 + 0) * -50",
+            0,
+            0
+          ]
+        },
+        "rightArm": {
+          "rotation": [
+            "0 + math.sin(q.anim_time * 360) * -40",
+            0,
+            8
+          ]
+        },
+        "leftArm": {
+          "rotation": [
+            "0 + math.sin(q.anim_time * 360) * 40",
+            0,
+            -8
+          ]
+        },
+        "waist": {
+          "rotation": [
+            14,
+            "math.sin(q.anim_time * 360 + 0) * 6",
+            0
+          ]
+        },
+        "head": {
+          "rotation": [
+            -11.9,
+            0,
+            0
+          ]
+        },
+        "root": {
+          "position": [
+            0,
+            "math.abs(math.sin(q.anim_time * 360)) * 0.9 - 0.3",
+            0
+          ]
+        },
+        "hair": {
+          "rotation": [
+            "-8 + math.sin(q.anim_time * 720 + 0) * 3",
+            0,
+            0
+          ]
+        },
+        "belt": {
+          "rotation": [
+            "10 + math.sin(q.anim_time * 720 + 0) * 6",
+            0,
+            0
+          ]
+        }
+      },
+      "particle_effects": {
+        "0.0": {
+          "effect": "run_dust",
+          "locator": "feet"
+        },
+        "0.5": {
+          "effect": "run_dust",
+          "locator": "feet"
+        }
+      }
+    },
+    "animation.jjk.gojo.attack": {
+      "loop": false,
+      "animation_length": 0.55,
+      "bones": {
+        "rightArm": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.12": {
+              "post": [
+                25,
+                -10,
+                10
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.22": {
+              "post": [
+                -95,
+                15,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.36": {
+              "post": [
+                -85,
+                10,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.55": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "leftArm": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.12": {
+              "post": [
+                -25,
+                0,
+                -10
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.22": {
+              "post": [
+                15,
+                0,
+                -6
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.55": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "waist": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.12": {
+              "post": [
+                0,
+                18,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.22": {
+              "post": [
+                6,
+                -22,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.55": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        }
+      },
+      "particle_effects": {
+        "0.22": {
+          "effect": "hit",
+          "locator": "hand_r"
+        }
+      },
+      "sound_effects": {
+        "0.16": {
+          "effect": "attack"
+        }
+      }
+    },
+    "animation.jjk.gojo.hurt": {
+      "loop": false,
+      "animation_length": 0.35,
+      "bones": {
+        "waist": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.08": {
+              "post": [
+                -10,
+                0,
+                4
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.35": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "head": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.08": {
+              "post": [
+                -12,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.35": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "rightArm": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.08": {
+              "post": [
+                -8,
+                0,
+                12
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.35": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "leftArm": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.08": {
+              "post": [
+                -8,
+                0,
+                -12
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.35": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        }
+      }
+    },
+    "animation.jjk.gojo.death": {
+      "loop": "hold_on_last_frame",
+      "animation_length": 1.2,
+      "bones": {
+        "waist": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.4": {
+              "post": [
+                -18,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "1.2": {
+              "post": [
+                -25,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "head": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.4": {
+              "post": [
+                -20,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "1.2": {
+              "post": [
+                -30,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "rightArm": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.5": {
+              "post": [
+                -15,
+                0,
+                20
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "1.2": {
+              "post": [
+                -10,
+                0,
+                25
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "leftArm": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "0.5": {
+              "post": [
+                -15,
+                0,
+                -20
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "1.2": {
+              "post": [
+                -10,
+                0,
+                -25
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "rightLeg": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "1.2": {
+              "post": [
+                12,
+                0,
+                4
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        },
+        "leftLeg": {
+          "rotation": {
+            "0": {
+              "post": [
+                0,
+                0,
+                0
+              ],
+              "lerp_mode": "catmullrom"
+            },
+            "1.2": {
+              "post": [
+                6,
+                0,
+                -4
+              ],
+              "lerp_mode": "catmullrom"
+            }
+          }
+        }
+      },
+      "particle_effects": {
+        "0.05": {
+          "effect": "death_burst",
+          "locator": "center"
+        }
+      }
+    }
+  }
+}

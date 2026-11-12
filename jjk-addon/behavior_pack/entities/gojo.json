@@ -5,7 +5,14 @@
       "identifier": "jjk:gojo",
       "is_spawnable": true,
       "is_summonable": true,
-      "is_experimental": false
+      "is_experimental": false,
+      "properties": {
+        "jjk:fighting": {
+          "type": "bool",
+          "default": false,
+          "client_sync": true
+        }
+      }
     },
     "components": {
       "minecraft:type_family": {
@@ -100,6 +107,42 @@
             }
           }
         ]
+      },
+      "minecraft:environment_sensor": {
+        "triggers": [
+          {
+            "filters": {
+              "all_of": [
+                {
+                  "test": "has_target",
+                  "value": true
+                },
+                {
+                  "test": "bool_property",
+                  "domain": "jjk:fighting",
+                  "value": false
+                }
+              ]
+            },
+            "event": "jjk:fight_on"
+          },
+          {
+            "filters": {
+              "all_of": [
+                {
+                  "test": "has_target",
+                  "value": false
+                },
+                {
+                  "test": "bool_property",
+                  "domain": "jjk:fighting",
+                  "value": true
+                }
+              ]
+            },
+            "event": "jjk:fight_off"
+          }
+        ]
       }
     },
     "component_groups": {
@@ -143,6 +186,16 @@
           "component_groups": [
             "jjk:combat"
           ]
+        }
+      },
+      "jjk:fight_on": {
+        "set_property": {
+          "jjk:fighting": true
+        }
+      },
+      "jjk:fight_off": {
+        "set_property": {
+          "jjk:fighting": false
         }
       }
     }

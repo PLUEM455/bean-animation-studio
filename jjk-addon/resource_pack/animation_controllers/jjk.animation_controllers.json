@@ -1,0 +1,131 @@
+{
+  "format_version": "1.10.0",
+  "animation_controllers": {
+    "controller.animation.jjk.move": {
+      "initial_state": "default",
+      "states": {
+        "default": {
+          "animations": [
+            {
+              "idle": "1.0 - math.clamp(q.ground_speed * 1.2, 0, 1)"
+            },
+            {
+              "walk": "math.clamp(q.ground_speed * 1.2, 0, 1) * (1.0 - v.fight)"
+            },
+            {
+              "run": "math.clamp(q.ground_speed * 1.2, 0, 1) * v.fight"
+            }
+          ],
+          "transitions": [
+            {
+              "dead": "!q.is_alive"
+            }
+          ],
+          "blend_transition": 0.2
+        },
+        "dead": {
+          "animations": [
+            "death"
+          ],
+          "blend_transition": 0.15
+        }
+      }
+    },
+    "controller.animation.jjk.attack": {
+      "initial_state": "default",
+      "states": {
+        "default": {
+          "transitions": [
+            {
+              "swing": "v.attack_time > 0 && v.attack_time < 0.2 && q.is_alive"
+            }
+          ]
+        },
+        "swing": {
+          "animations": [
+            "attack"
+          ],
+          "transitions": [
+            {
+              "default": "q.all_animations_finished"
+            }
+          ],
+          "blend_transition": 0.08
+        }
+      }
+    },
+    "controller.animation.jjk.hurt": {
+      "initial_state": "default",
+      "states": {
+        "default": {
+          "transitions": [
+            {
+              "hurt": "q.hurt_time > 0 && q.is_alive"
+            }
+          ]
+        },
+        "hurt": {
+          "animations": [
+            "hurt"
+          ],
+          "transitions": [
+            {
+              "default": "q.hurt_time <= 0"
+            }
+          ],
+          "blend_transition": 0.1
+        }
+      }
+    },
+    "controller.animation.jjk.gojo_fx": {
+      "initial_state": "calm",
+      "states": {
+        "calm": {
+          "particle_effects": [
+            {
+              "effect": "eye_glow",
+              "locator": "eye_l"
+            },
+            {
+              "effect": "eye_glow",
+              "locator": "eye_r"
+            }
+          ],
+          "transitions": [
+            {
+              "combat": "q.property('jjk:fighting') && q.is_alive"
+            },
+            {
+              "dead": "!q.is_alive"
+            }
+          ]
+        },
+        "combat": {
+          "particle_effects": [
+            {
+              "effect": "eye_glow",
+              "locator": "eye_l"
+            },
+            {
+              "effect": "eye_glow",
+              "locator": "eye_r"
+            },
+            {
+              "effect": "aura",
+              "locator": "center"
+            }
+          ],
+          "transitions": [
+            {
+              "calm": "!q.property('jjk:fighting') && q.is_alive"
+            },
+            {
+              "dead": "!q.is_alive"
+            }
+          ]
+        },
+        "dead": {}
+      }
+    }
+  }
+}

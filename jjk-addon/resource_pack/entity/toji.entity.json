@@ -18,6 +18,40 @@
       "spawn_egg": {
         "texture": "jjk_toji_spawn_egg",
         "texture_index": 0
+      },
+      "animations": {
+        "idle": "animation.jjk.toji.idle",
+        "walk": "animation.jjk.toji.walk",
+        "run": "animation.jjk.toji.run",
+        "attack": "animation.jjk.toji.attack",
+        "hurt": "animation.jjk.toji.hurt",
+        "death": "animation.jjk.toji.death",
+        "look_at": "animation.common.look_at_target",
+        "move_ctrl": "controller.animation.jjk.move",
+        "attack_ctrl": "controller.animation.jjk.attack",
+        "hurt_ctrl": "controller.animation.jjk.hurt"
+      },
+      "scripts": {
+        "initialize": [
+          "v.fight = 0.0;"
+        ],
+        "pre_animation": [
+          "v.fight = math.lerp(v.fight, q.property('jjk:fighting') ? 1.0 : 0.0, 0.12);"
+        ],
+        "animate": [
+          "look_at",
+          "move_ctrl",
+          "attack_ctrl",
+          "hurt_ctrl"
+        ]
+      },
+      "particle_effects": {
+        "run_dust": "jjk:run_dust",
+        "hit": "jjk:toji_slash",
+        "death_burst": "jjk:toji_death"
+      },
+      "sound_effects": {
+        "attack": "jjk.toji.attack"
       }
     }
   }

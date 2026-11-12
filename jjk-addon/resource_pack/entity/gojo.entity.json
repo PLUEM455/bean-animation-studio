@@ -18,6 +18,44 @@
       "spawn_egg": {
         "texture": "jjk_gojo_spawn_egg",
         "texture_index": 0
+      },
+      "animations": {
+        "idle": "animation.jjk.gojo.idle",
+        "walk": "animation.jjk.gojo.walk",
+        "run": "animation.jjk.gojo.run",
+        "attack": "animation.jjk.gojo.attack",
+        "hurt": "animation.jjk.gojo.hurt",
+        "death": "animation.jjk.gojo.death",
+        "look_at": "animation.common.look_at_target",
+        "move_ctrl": "controller.animation.jjk.move",
+        "attack_ctrl": "controller.animation.jjk.attack",
+        "hurt_ctrl": "controller.animation.jjk.hurt",
+        "fx_ctrl": "controller.animation.jjk.gojo_fx"
+      },
+      "scripts": {
+        "initialize": [
+          "v.fight = 0.0;"
+        ],
+        "pre_animation": [
+          "v.fight = math.lerp(v.fight, q.property('jjk:fighting') ? 1.0 : 0.0, 0.12);"
+        ],
+        "animate": [
+          "look_at",
+          "move_ctrl",
+          "attack_ctrl",
+          "hurt_ctrl",
+          "fx_ctrl"
+        ]
+      },
+      "particle_effects": {
+        "eye_glow": "jjk:gojo_eye_glow",
+        "aura": "jjk:gojo_aura",
+        "run_dust": "jjk:run_dust",
+        "hit": "jjk:gojo_hit",
+        "death_burst": "jjk:gojo_death"
+      },
+      "sound_effects": {
+        "attack": "jjk.gojo.attack"
       }
     }
   }

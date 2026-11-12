@@ -32,3 +32,15 @@ for (const [name, dmg] of Object.entries(MOBS)) {
     assert.deepEqual(e.events['jjk:combat_end'].remove.component_groups, ['jjk:combat']);
   });
 }
+
+for (const name of ['gojo', 'toji']) {
+  test(`${name} syncs fighting state to client`, () => {
+    const e = readJson(`behavior_pack/entities/${name}.json`)['minecraft:entity'];
+    const prop = e.description.properties['jjk:fighting'];
+    assert.equal(prop.type, 'bool'); assert.equal(prop.client_sync, true);
+    const trig = JSON.stringify(e.components['minecraft:environment_sensor']);
+    assert.ok(trig.includes('has_target') && trig.includes('jjk:fight_on') && trig.includes('jjk:fight_off'));
+    assert.ok(e.events['jjk:fight_on'].set_property['jjk:fighting'] === true);
+    assert.ok(e.events['jjk:fight_off'].set_property['jjk:fighting'] === false);
+  });
+}
