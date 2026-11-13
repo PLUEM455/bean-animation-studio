@@ -7,7 +7,8 @@
         "default": "entity_emissive_alpha"
       },
       "textures": {
-        "default": "textures/entity/giant_anaconda"
+        "default": "textures/entity/giant_anaconda",
+        "red": "textures/entity/giant_anaconda_red"
       },
       "geometry": {
         "default": "geometry.giant_anaconda"

@@ -101,6 +101,16 @@
       },
       "horror:despawn": {
         "minecraft:instant_despawn": {}
+      },
+      "horror:skin_black": {
+        "minecraft:variant": {
+          "value": 0
+        }
+      },
+      "horror:skin_red": {
+        "minecraft:variant": {
+          "value": 1
+        }
       }
     },
     "components": {
@@ -200,9 +210,49 @@
     },
     "events": {
       "minecraft:entity_spawned": {
+        "sequence": [
+          {
+            "add": {
+              "component_groups": [
+                "horror:wander"
+              ]
+            }
+          },
+          {
+            "randomize": [
+              {
+                "weight": 3,
+                "add": {
+                  "component_groups": [
+                    "horror:skin_black"
+                  ]
+                }
+              },
+              {
+                "weight": 1,
+                "add": {
+                  "component_groups": [
+                    "horror:skin_red"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "horror:spawn_red": {
         "add": {
           "component_groups": [
-            "horror:wander"
+            "horror:wander",
+            "horror:skin_red"
+          ]
+        }
+      },
+      "horror:spawn_black": {
+        "add": {
+          "component_groups": [
+            "horror:wander",
+            "horror:skin_black"
           ]
         }
       },

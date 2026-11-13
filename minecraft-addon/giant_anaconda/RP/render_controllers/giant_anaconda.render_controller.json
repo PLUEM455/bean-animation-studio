@@ -8,8 +8,16 @@
           "*": "Material.default"
         }
       ],
+      "arrays": {
+        "textures": {
+          "Array.skins": [
+            "Texture.default",
+            "Texture.red"
+          ]
+        }
+      },
       "textures": [
-        "Texture.default"
+        "Array.skins[query.variant]"
       ]
     }
   }
