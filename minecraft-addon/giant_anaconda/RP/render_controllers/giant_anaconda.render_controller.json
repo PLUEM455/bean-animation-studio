@@ -11,17 +11,6 @@
       "textures": [
         "Texture.default"
       ]
-    },
-    "controller.render.giant_anaconda_eyes": {
-      "geometry": "Geometry.eyes",
-      "materials": [
-        {
-          "*": "Material.glow"
-        }
-      ],
-      "textures": [
-        "Texture.default"
-      ]
     }
   }
 }

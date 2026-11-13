@@ -9,6 +9,9 @@
     },
     "component_groups": {
       "horror:wander": {
+        "minecraft:mark_variant": {
+          "value": 0
+        },
         "minecraft:movement": {
           "value": 0.22
         },
@@ -29,6 +32,9 @@
         }
       },
       "horror:stalking": {
+        "minecraft:mark_variant": {
+          "value": 1
+        },
         "minecraft:movement": {
           "value": 0.0
         },
@@ -50,6 +56,9 @@
         }
       },
       "horror:hunting": {
+        "minecraft:mark_variant": {
+          "value": 2
+        },
         "minecraft:movement": {
           "value": 0.32
         },

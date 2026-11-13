@@ -4,29 +4,34 @@
     "description": {
       "identifier": "horror:giant_anaconda",
       "materials": {
-        "default": "entity_alphatest",
-        "glow": "entity_emissive_alpha"
+        "default": "entity_emissive_alpha"
       },
       "textures": {
         "default": "textures/entity/giant_anaconda"
       },
       "geometry": {
-        "default": "geometry.giant_anaconda",
-        "eyes": "geometry.giant_anaconda_eyes"
+        "default": "geometry.giant_anaconda"
       },
       "animations": {
-        "slither": "animation.giant_anaconda.slither"
+        "slither": "animation.giant_anaconda.slither",
+        "idle": "animation.giant_anaconda.idle",
+        "tongue": "animation.giant_anaconda.tongue",
+        "rear_up": "animation.giant_anaconda.rear_up",
+        "hunt": "animation.giant_anaconda.hunt",
+        "pose": "controller.animation.giant_anaconda.pose"
       },
       "scripts": {
         "animate": [
+          "idle",
+          "tongue",
           {
-            "slither": "query.modified_move_speed > 0.0"
-          }
+            "slither": "query.modified_move_speed > 0.01"
+          },
+          "pose"
         ]
       },
       "render_controllers": [
-        "controller.render.giant_anaconda",
-        "controller.render.giant_anaconda_eyes"
+        "controller.render.giant_anaconda"
       ],
       "spawn_egg": {
         "base_color": "#0c0c14",
