@@ -1,0 +1,9 @@
+{
+  "resource_pack_name": "giant_anaconda_horror",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "giant_anaconda_spawn_egg": {
+      "textures": "textures/items/giant_anaconda_spawn_egg"
+    }
+  }
+}

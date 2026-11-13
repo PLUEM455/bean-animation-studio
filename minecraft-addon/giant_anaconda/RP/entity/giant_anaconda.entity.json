@@ -1,0 +1,37 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "horror:giant_anaconda",
+      "materials": {
+        "default": "entity_alphatest",
+        "glow": "entity_emissive_alpha"
+      },
+      "textures": {
+        "default": "textures/entity/giant_anaconda"
+      },
+      "geometry": {
+        "default": "geometry.giant_anaconda",
+        "eyes": "geometry.giant_anaconda_eyes"
+      },
+      "animations": {
+        "slither": "animation.giant_anaconda.slither"
+      },
+      "scripts": {
+        "animate": [
+          {
+            "slither": "query.modified_move_speed > 0.0"
+          }
+        ]
+      },
+      "render_controllers": [
+        "controller.render.giant_anaconda",
+        "controller.render.giant_anaconda_eyes"
+      ],
+      "spawn_egg": {
+        "base_color": "#0c0c14",
+        "overlay_color": "#ffd700"
+      }
+    }
+  }
+}

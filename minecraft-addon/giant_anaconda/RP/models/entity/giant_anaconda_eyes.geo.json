@@ -1,0 +1,83 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.giant_anaconda_eyes",
+        "texture_width": 128,
+        "texture_height": 128,
+        "visible_bounds_width": 4,
+        "visible_bounds_height": 2,
+        "visible_bounds_offset": [
+          0,
+          0.5,
+          0
+        ]
+      },
+      "bones": [
+        {
+          "name": "head",
+          "pivot": [
+            0,
+            4,
+            0
+          ]
+        },
+        {
+          "name": "eye_l",
+          "parent": "head",
+          "pivot": [
+            0,
+            4,
+            -8
+          ],
+          "cubes": [
+            {
+              "origin": [
+                1.5,
+                4,
+                -9
+              ],
+              "size": [
+                2,
+                2,
+                1
+              ],
+              "uv": [
+                0,
+                80
+              ]
+            }
+          ]
+        },
+        {
+          "name": "eye_r",
+          "parent": "head",
+          "pivot": [
+            0,
+            4,
+            -8
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -3.5,
+                4,
+                -9
+              ],
+              "size": [
+                2,
+                2,
+                1
+              ],
+              "uv": [
+                0,
+                80
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
