@@ -18,16 +18,22 @@
         "tongue": "animation.giant_anaconda.tongue",
         "rear_up": "animation.giant_anaconda.rear_up",
         "hunt": "animation.giant_anaconda.hunt",
-        "pose": "controller.animation.giant_anaconda.pose"
+        "pose": "controller.animation.giant_anaconda.pose",
+        "strike": "animation.giant_anaconda.strike",
+        "flinch": "animation.giant_anaconda.flinch",
+        "death": "animation.giant_anaconda.death"
       },
       "scripts": {
         "animate": [
           "idle",
           "tongue",
           {
-            "slither": "query.modified_move_speed > 0.01"
+            "slither": "math.clamp(query.modified_move_speed * 4.0, 0.0, 1.0)"
           },
-          "pose"
+          "pose",
+          {
+            "death": "!query.is_alive"
+          }
         ]
       },
       "render_controllers": [

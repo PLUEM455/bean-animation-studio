@@ -1,0 +1,101 @@
+{
+  "format_version": "1.14.0",
+  "sound_definitions": {
+    "giant_anaconda.hiss": {
+      "category": "hostile",
+      "min_distance": 4,
+      "max_distance": 32,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/hiss",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "giant_anaconda.roar": {
+      "category": "hostile",
+      "min_distance": 8,
+      "max_distance": 64,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/roar",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "giant_anaconda.bite": {
+      "category": "hostile",
+      "min_distance": 2,
+      "max_distance": 24,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/bite",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "giant_anaconda.hurt": {
+      "category": "hostile",
+      "min_distance": 2,
+      "max_distance": 24,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/hurt",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "giant_anaconda.death": {
+      "category": "hostile",
+      "min_distance": 4,
+      "max_distance": 40,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/death",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "giant_anaconda.idle": {
+      "category": "hostile",
+      "min_distance": 2,
+      "max_distance": 20,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/idle",
+          "volume": 0.8,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "giant_anaconda.slither": {
+      "category": "hostile",
+      "min_distance": 1,
+      "max_distance": 16,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/slither",
+          "volume": 0.6,
+          "load_on_low_memory": true
+        }
+      ]
+    },
+    "giant_anaconda.vanish": {
+      "category": "hostile",
+      "min_distance": 4,
+      "max_distance": 32,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/vanish",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
+    }
+  }
+}

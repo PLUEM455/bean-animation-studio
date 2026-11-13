@@ -1,0 +1,26 @@
+{
+  "entity_sounds": {
+    "entities": {
+      "horror:giant_anaconda": {
+        "volume": 1.0,
+        "pitch": [
+          0.9,
+          1.1
+        ],
+        "events": {
+          "ambient": "giant_anaconda.idle",
+          "hurt": "giant_anaconda.hurt",
+          "death": "giant_anaconda.death",
+          "step": {
+            "sound": "giant_anaconda.slither",
+            "volume": 0.5,
+            "pitch": [
+              0.85,
+              1.05
+            ]
+          }
+        }
+      }
+    }
+  }
+}

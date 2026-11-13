@@ -146,19 +146,36 @@
         "value": 10,
         "range_min": 6,
         "range_max": 14,
-        "event_name": "ambient.cave"
+        "event_name": "ambient"
       },
       "minecraft:damage_sensor": {
-        "triggers": {
-          "on_damage": {
-            "filters": {
-              "test": "is_family",
-              "subject": "other",
-              "value": "player"
-            },
-            "event": "horror:start_hunt"
+        "triggers": [
+          {
+            "on_damage": {
+              "filters": {
+                "all_of": [
+                  {
+                    "test": "is_family",
+                    "subject": "other",
+                    "value": "player"
+                  },
+                  {
+                    "test": "is_mark_variant",
+                    "subject": "self",
+                    "operator": "!=",
+                    "value": 2
+                  }
+                ]
+              },
+              "event": "horror:start_hunt"
+            }
+          },
+          {
+            "on_damage": {
+              "event": "horror:on_hurt"
+            }
           }
-        }
+        ]
       },
       "minecraft:behavior.float": {
         "priority": 0
@@ -169,7 +186,10 @@
       "minecraft:behavior.melee_attack": {
         "priority": 3,
         "speed_multiplier": 1.2,
-        "track_target": true
+        "track_target": true,
+        "on_attack": {
+          "event": "horror:on_bite"
+        }
       },
       "minecraft:behavior.random_look_around": {
         "priority": 8
@@ -204,7 +224,7 @@
           },
           {
             "queue_command": {
-              "command": "playsound mob.warden.listening_angry @a[r=32] ~ ~ ~ 1 0.5"
+              "command": "playsound giant_anaconda.hiss @a[r=32] ~ ~ ~ 1 1"
             }
           }
         ]
@@ -228,16 +248,32 @@
           },
           {
             "queue_command": {
-              "command": "playsound mob.warden.roar @a[r=48] ~ ~ ~ 1 0.6"
+              "command": [
+                "playsound giant_anaconda.roar @a[r=48] ~ ~ ~ 1 1",
+                "playanimation @s animation.giant_anaconda.flinch flinch 0.1"
+              ]
             }
           }
         ]
+      },
+      "horror:on_bite": {
+        "queue_command": {
+          "command": [
+            "playsound giant_anaconda.bite @a[r=24] ~ ~ ~ 1 1",
+            "playanimation @s animation.giant_anaconda.strike strike 0.05"
+          ]
+        }
+      },
+      "horror:on_hurt": {
+        "queue_command": {
+          "command": "playanimation @s animation.giant_anaconda.flinch flinch 0.05"
+        }
       },
       "horror:vanish": {
         "sequence": [
           {
             "queue_command": {
-              "command": "playsound mob.warden.dig @a[r=32] ~ ~ ~ 1 0.5"
+              "command": "playsound giant_anaconda.vanish @a[r=32] ~ ~ ~ 1 1"
             }
           },
           {
