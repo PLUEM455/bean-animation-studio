@@ -88,27 +88,6 @@
             "minecraft:vine",
             "minecraft:web"
           ]
-        },
-        "minecraft:timer": {
-          "looping": false,
-          "time": 3,
-          "time_down_event": {
-            "event": "horror:arm_vanish"
-          }
-        }
-      },
-      "horror:vanish_watch": {
-        "minecraft:environment_sensor": {
-          "triggers": [
-            {
-              "filters": {
-                "test": "has_target",
-                "subject": "self",
-                "value": false
-              },
-              "event": "horror:vanish"
-            }
-          ]
         }
       },
       "horror:despawn": {
@@ -244,13 +223,6 @@
             }
           }
         ]
-      },
-      "horror:arm_vanish": {
-        "add": {
-          "component_groups": [
-            "horror:vanish_watch"
-          ]
-        }
       },
       "horror:vanish": {
         "sequence": [

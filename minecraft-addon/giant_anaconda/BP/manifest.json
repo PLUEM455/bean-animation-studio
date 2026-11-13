@@ -6,12 +6,12 @@
     "uuid": "d4dd886b-6e8e-573f-b7a2-6f94e186199f",
     "version": [
       1,
-      0,
+      1,
       0
     ],
     "min_engine_version": [
       1,
-      20,
+      21,
       0
     ]
   },
@@ -21,9 +21,20 @@
       "uuid": "f5f45c27-2f64-52e4-a7f6-30a9a749adf8",
       "version": [
         1,
-        0,
+        1,
         0
       ]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "90b2958b-8dc1-5b9a-ae55-cb2def4f460a",
+      "version": [
+        1,
+        1,
+        0
+      ],
+      "entry": "scripts/main.js"
     }
   ],
   "dependencies": [
@@ -31,9 +42,13 @@
       "uuid": "20ad0bbc-3055-5f73-9ae0-9ff7a33b8904",
       "version": [
         1,
-        0,
+        1,
         0
       ]
+    },
+    {
+      "module_name": "@minecraft/server",
+      "version": "1.11.0"
     }
   ]
 }
