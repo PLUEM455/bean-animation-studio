@@ -300,7 +300,8 @@
             "queue_command": {
               "command": [
                 "playsound giant_anaconda.roar @a[r=48] ~ ~ ~ 1 1",
-                "playanimation @s animation.giant_anaconda.flinch flinch 0.1"
+                "playanimation @s animation.giant_anaconda.flinch flinch 0.1",
+                "camerashake add @a[r=24] 0.35 1.5 rotational"
               ]
             }
           }
@@ -310,7 +311,8 @@
         "queue_command": {
           "command": [
             "playsound giant_anaconda.bite @a[r=24] ~ ~ ~ 1 1",
-            "playanimation @s animation.giant_anaconda.strike strike 0.05"
+            "playanimation @s animation.giant_anaconda.strike strike 0.05",
+            "camerashake add @a[r=5] 0.7 0.35 positional"
           ]
         }
       },

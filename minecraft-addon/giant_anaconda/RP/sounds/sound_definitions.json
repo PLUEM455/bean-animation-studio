@@ -96,6 +96,18 @@
           "load_on_low_memory": true
         }
       ]
+    },
+    "giant_anaconda.heartbeat": {
+      "category": "hostile",
+      "min_distance": 0,
+      "max_distance": 16,
+      "sounds": [
+        {
+          "name": "sounds/mob/giant_anaconda/heartbeat",
+          "volume": 1.0,
+          "load_on_low_memory": true
+        }
+      ]
     }
   }
 }
