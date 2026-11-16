@@ -1,0 +1,788 @@
+<title>ถั่วป่วนปาร์ตี้</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Itim&display=swap" rel="stylesheet">
+<style>
+  /* Single committed look: jelly-bean carnival at night. Landscape tablet game, 1280x720 canvas scaled to fit. */
+  :root {
+    --ink: #1d0f3b;
+    --night: #2e1a63;
+    --cream: #fff6e0;
+    --bean-red: #ff5a6e;
+    --bean-blue: #3fa7ff;
+    --bean-yellow: #ffd23f;
+    --bean-green: #3ddc84;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; margin: 0; padding: 0; background: var(--ink); color: var(--cream); overflow: hidden; }
+  body { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; font-family: Itim, "Noto Sans Thai", "Leelawadee UI", sans-serif; }
+  #game { position: fixed; inset: 0; background: var(--ink); }
+  #game canvas { display: block; touch-action: none; }
+  #rotate { display: none; position: fixed; inset: 0; z-index: 10; background: var(--ink); color: var(--cream); align-items: center; justify-content: center; flex-direction: column; gap: 12px; text-align: center; font-size: 28px; padding: 24px; }
+  #rotate .phone { width: 64px; height: 104px; border: 6px solid var(--bean-yellow); border-radius: 14px; animation: turn 1.8s ease-in-out infinite; }
+  @keyframes turn { 0%,30% { transform: rotate(0); } 70%,100% { transform: rotate(-90deg); } }
+  @media (orientation: portrait) { #rotate { display: flex; } }
+  @media (prefers-reduced-motion: reduce) { #rotate .phone { animation: none; } }
+</style>
+<div id="game"></div>
+<div id="rotate"><div class="phone"></div><div>หมุนแท็บเล็ตเป็นแนวนอนนะ</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
+<script>
+(function () {
+'use strict';
+const W = 1280, H = 720;
+const FONT = 'Itim, "Noto Sans Thai", "Leelawadee UI", sans-serif';
+const INK = 0x1d0f3b, CREAM = 0xfff6e0;
+const SEATC = [0xff5a6e, 0x3fa7ff, 0xffd23f, 0x3ddc84];
+const NAMES = ['ถั่วแดง', 'ถั่วฟ้า', 'ถั่วเหลือง', 'ถั่วเขียว'];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+/* ---------------- storage ---------------- */
+const Store = {
+  d: null,
+  load() {
+    if (this.d) return this.d;
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem('bean-party-v1') || 'null'); } catch (e) {}
+    d = d || {};
+    d.set = Object.assign({ tut: 'first', sfx: true, rounds: 5 }, d.set || {});
+    d.seen = d.seen || {}; d.rank = d.rank || {}; d.solo = d.solo || 0;
+    this.d = d; return d;
+  },
+  save() { try { localStorage.setItem('bean-party-v1', JSON.stringify(this.d)); } catch (e) {} }
+};
+
+/* ---------------- sound (synthesized) ---------------- */
+const Snd = {
+  ac: null,
+  init() {
+    if (!this.ac) { try { this.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (this.ac && this.ac.state === 'suspended') this.ac.resume();
+  },
+  tone(f, d, type, v, f2, delay) {
+    if (!Store.load().set.sfx || !this.ac) return;
+    const a = this.ac, t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(v || .15, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + .02);
+  },
+  noise(d, v) {
+    if (!Store.load().set.sfx || !this.ac) return;
+    const a = this.ac, len = Math.floor(a.sampleRate * d), buf = a.createBuffer(1, len, a.sampleRate), ch = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const s = a.createBufferSource(), g = a.createGain(); s.buffer = buf; g.gain.value = v; s.connect(g); g.connect(a.destination); s.start();
+  },
+  play(n) {
+    switch (n) {
+      case 'tap': this.tone(660, .08, 'square', .06, 880); break;
+      case 'good': this.tone(660, .1, 'triangle', .14, 1000); break;
+      case 'bad': this.tone(220, .28, 'sawtooth', .12, 80); break;
+      case 'boom': this.noise(.5, .35); this.tone(130, .45, 'sine', .3, 38); break;
+      case 'throw': this.tone(320, .16, 'triangle', .12, 760); break;
+      case 'dash': this.tone(240, .2, 'sawtooth', .07, 640); break;
+      case 'boing': this.tone(170, .22, 'sine', .2, 440); break;
+      case 'fall': this.tone(520, .55, 'sine', .14, 70); break;
+      case 'count': this.tone(520, .14, 'square', .09); break;
+      case 'go': this.tone(780, .4, 'square', .1, 1150); break;
+      case 'win': [523, 659, 784, 1047].forEach((f, i) => this.tone(f, .22, 'triangle', .14, null, i * .12)); break;
+    }
+  }
+};
+
+/* ---------------- controls: 4 corner seats, joystick + one button, multitouch ---------------- */
+const SEATPOS = [
+  { jx: 140, jy: 140, bx: 340, by: 140 }, { jx: 1140, jy: 140, bx: 940, by: 140 },
+  { jx: 140, jy: 580, bx: 340, by: 580 }, { jx: 1140, jy: 580, bx: 940, by: 580 }
+];
+const JR = 80, BR = 56;
+const KEYS = [
+  { l: 'KeyA', r: 'KeyD', u: 'KeyW', d: 'KeyS', b: 'Space' },
+  { l: 'ArrowLeft', r: 'ArrowRight', u: 'ArrowUp', d: 'ArrowDown', b: 'Enter' }
+];
+const Ctl = {
+  n: 0, cfg: { joy: false, btn: false }, enabled: false, st: [], map: new Map(), cool: [0, 0, 0, 0], keys: {}, kp: [false, false, false, false], canvas: null,
+  mk() { return { x: 0, y: 0, kx: 0, ky: 0, joyId: null, btnId: null, btn: false, pressed: false }; },
+  reset() { this.st = [0, 1, 2, 3].map(() => this.mk()); this.map.clear(); this.cool = [0, 0, 0, 0]; },
+  setup(n, cfg) { this.reset(); this.n = n; this.cfg = cfg; this.enabled = true; },
+  off() { this.reset(); this.n = 0; this.enabled = false; },
+  toGame(e) { const r = this.canvas.getBoundingClientRect(); return [(e.clientX - r.left) * W / r.width, (e.clientY - r.top) * H / r.height]; },
+  down(e) {
+    if (!this.enabled) return;
+    const [x, y] = this.toGame(e); let best = null, bd = 1e9;
+    for (let i = 0; i < this.n; i++) {
+      const L = SEATPOS[i], s = this.st[i];
+      if (this.cfg.joy && s.joyId == null) { const d = Math.hypot(x - L.jx, y - L.jy); if (d < 130 && d < bd) { bd = d; best = [i, 'j']; } }
+      if (this.cfg.btn && s.btnId == null) { const d = Math.hypot(x - L.bx, y - L.by); if (d < 90 && d < bd) { bd = d; best = [i, 'b']; } }
+    }
+    if (!best) return;
+    const [i, k] = best, s = this.st[i];
+    this.map.set(e.pointerId, { i, k });
+    if (k === 'j') { s.joyId = e.pointerId; this.move(e); } else { s.btnId = e.pointerId; s.btn = true; s.pressed = true; }
+    try { this.canvas.setPointerCapture(e.pointerId); } catch (_) {}
+  },
+  move(e) {
+    const m = this.map.get(e.pointerId); if (!m || m.k !== 'j') return;
+    const L = SEATPOS[m.i], s = this.st[m.i], [x, y] = this.toGame(e);
+    let dx = x - L.jx, dy = y - L.jy; const d = Math.hypot(dx, dy);
+    if (d > JR) { dx *= JR / d; dy *= JR / d; }
+    s.kx = dx; s.ky = dy;
+    if (d < 14) { s.x = 0; s.y = 0; } else { s.x = dx / JR; s.y = dy / JR; }
+  },
+  up(e) {
+    const m = this.map.get(e.pointerId); if (!m) return;
+    this.map.delete(e.pointerId); const s = this.st[m.i];
+    if (m.k === 'j') { s.joyId = null; s.x = s.y = s.kx = s.ky = 0; } else { s.btnId = null; s.btn = false; }
+  },
+  get(i) {
+    const s = this.st[i]; let x = s.x, y = s.y, down = s.btn, pressed = s.pressed; const K = KEYS[i];
+    if (K) {
+      const k = this.keys, kx = (k[K.r] ? 1 : 0) - (k[K.l] ? 1 : 0), ky = (k[K.d] ? 1 : 0) - (k[K.u] ? 1 : 0);
+      if (kx || ky) { const l = Math.hypot(kx, ky); x = kx / l; y = ky / l; }
+      if (k[K.b]) down = true; if (this.kp[i]) pressed = true;
+    }
+    return { x, y, down, pressed };
+  },
+  endFrame() { this.st.forEach(s => s.pressed = false); this.kp = [false, false, false, false]; },
+  init(canvas) {
+    this.canvas = canvas; this.reset();
+    canvas.addEventListener('pointerdown', e => this.down(e), { passive: false });
+    canvas.addEventListener('pointermove', e => this.move(e), { passive: false });
+    window.addEventListener('pointerup', e => this.up(e));
+    window.addEventListener('pointercancel', e => this.up(e));
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('keydown', e => {
+      if (!this.enabled) return;
+      this.keys[e.code] = true;
+      KEYS.forEach((K, i) => { if (K.b === e.code && !e.repeat) this.kp[i] = true; });
+      if (/^(Arrow|Space|Enter)/.test(e.code)) e.preventDefault();
+    });
+    window.addEventListener('keyup', e => { this.keys[e.code] = false; });
+  }
+};
+
+/* ---------------- drawing helpers ---------------- */
+function T(s, x, y, str, size, color, o) {
+  o = o || {};
+  const st = Object.assign({ fontFamily: FONT, fontSize: size + 'px', color: color || '#fff6e0', stroke: '#1d0f3b', strokeThickness: Math.max(3, Math.round(size / 7)), align: 'center' }, o.style || {});
+  const t = s.add.text(x, y, str, st).setOrigin(o.ox == null ? .5 : o.ox, o.oy == null ? .5 : o.oy).setResolution(2);
+  if (o.depth != null) t.setDepth(o.depth);
+  return t;
+}
+function bgGrad(s, c1, c2) {
+  const k = 'bg' + c1 + c2;
+  if (!s.textures.exists(k)) {
+    const ct = s.textures.createCanvas(k, 4, 256), x = ct.getContext(), gr = x.createLinearGradient(0, 0, 0, 256);
+    gr.addColorStop(0, c1); gr.addColorStop(1, c2); x.fillStyle = gr; x.fillRect(0, 0, 4, 256); ct.refresh();
+  }
+  return s.add.image(W / 2, H / 2, k).setDisplaySize(W, H).setDepth(-100);
+}
+function Btn(s, x, y, w, h, label, cb, fill, size, o) {
+  o = o || {};
+  const c = s.add.container(x, y), g = s.add.graphics();
+  g.fillStyle(INK, 1).fillRoundedRect(-w / 2, -h / 2 + 7, w, h, h / 3);
+  g.fillStyle(fill == null ? 0xffd23f : fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, h / 3);
+  g.lineStyle(4, INK, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, h / 3);
+  const t = T(s, 0, -2, label, size || 30, o.color || '#1d0f3b', { style: { strokeThickness: 0, wordWrap: { width: w - 20 } } });
+  c.add([g, t]); c.setSize(w, h); c.setInteractive({ useHandCursor: true });
+  c.on('pointerdown', () => { Snd.init(); s.tweens.add({ targets: c, scaleX: .93, scaleY: .93, duration: 70, yoyo: true }); });
+  c.on('pointerup', () => { Snd.play('tap'); cb(c); });
+  c.setLabel = l => t.setText(l); c.tint = fill => { g.clear(); g.fillStyle(INK, 1).fillRoundedRect(-w / 2, -h / 2 + 7, w, h, h / 3); g.fillStyle(fill, 1).fillRoundedRect(-w / 2, -h / 2, w, h, h / 3); g.lineStyle(4, INK, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, h / 3); };
+  return c;
+}
+function mkBean(s, i, x, y, sc) {
+  sc = sc || 1;
+  const sh = s.add.image(x, y + 44 * sc, 'shadow').setScale(sc).setDepth(2);
+  const b = s.add.image(x, y, 'bean' + i).setScale(sc).setDepth(3);
+  b.base = sc; b.sh = sh;
+  b.put = (px, py) => { b.setPosition(px, py); sh.setPosition(px, py + 44 * b.base); };
+  b.kill = () => { sh.destroy(); b.destroy(); };
+  return b;
+}
+function squash(s, b, a) {
+  s.tweens.add({ targets: b, scaleX: b.base * (a || 1.25), scaleY: b.base * .78, duration: 90, yoyo: true, ease: 'Sine.easeOut' });
+}
+function confetti(s, x, y, n, power) {
+  for (let i = 0; i < n; i++) {
+    const im = s.add.image(x, y, 'conf').setTint(Phaser.Utils.Array.GetRandom(SEATC.concat([0xffffff, 0xff9ff3]))).setDepth(800).setRotation(Math.random() * 6);
+    const a = Math.random() * Math.PI * 2, sp = (120 + Math.random() * 380) * (power || 1);
+    s.tweens.add({ targets: im, x: x + Math.cos(a) * sp, y: y + Math.sin(a) * sp + 220, rotation: im.rotation + 8, alpha: 0, duration: 900 + Math.random() * 800, ease: 'Cubic.easeOut', onComplete: () => im.destroy() });
+  }
+}
+function pop(s, x, y, str, color, size) {
+  const t = T(s, x, y, str, size || 38, color || '#fff6e0', { depth: 700 });
+  t.setScale(.4); s.tweens.add({ targets: t, scale: 1, duration: 140, ease: 'Back.easeOut' });
+  s.tweens.add({ targets: t, y: y - 70, alpha: 0, delay: 350, duration: 600, onComplete: () => t.destroy() });
+}
+function floaty(s) {
+  for (let i = 0; i < 9; i++) {
+    const b = s.add.image(rnd(0, W), rnd(0, H), 'bean' + (i % 4)).setAlpha(.16).setScale(rnd(.8, 1.7)).setAngle(rnd(0, 360)).setDepth(-50);
+    s.tweens.add({ targets: b, y: b.y + rnd(-60, 60), angle: b.angle + rnd(-40, 40), duration: rnd(2500, 4500), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  }
+}
+/* tutorial drawing helpers (draw into container c, local coords) */
+function addG(s, c) { const g = s.add.graphics(); c.add(g); return g; }
+function jIcon(s, c, x, y) {
+  const g = addG(s, c);
+  g.fillStyle(0xffffff, .5).fillCircle(x, y, 50); g.lineStyle(5, INK, 1).strokeCircle(x, y, 50);
+  g.fillStyle(0xff5a6e, 1).fillCircle(x + 14, y - 10, 24); g.lineStyle(4, INK, 1).strokeCircle(x + 14, y - 10, 24);
+}
+function bIcon(s, c, x, y, col) {
+  const g = addG(s, c);
+  g.fillStyle(col || 0xffd23f, 1).fillCircle(x, y, 40); g.lineStyle(5, INK, 1).strokeCircle(x, y, 40);
+  g.fillStyle(0xffffff, .5).fillEllipse(x - 12, y - 14, 18, 10);
+}
+function img(s, c, key, x, y, sc) { const i = s.add.image(x, y, key).setScale(sc || 1); c.add(i); return i; }
+function tx(s, c, x, y, str, color, size) { const t = T(s, x, y, str, size || 30, color || '#1d0f3b', { style: { strokeThickness: 0 } }); c.add(t); return t; }
+function arrow(s, c, x1, y1, x2, y2, col) {
+  const g = addG(s, c), a = Math.atan2(y2 - y1, x2 - x1);
+  g.lineStyle(6, col || INK, 1).lineBetween(x1, y1, x2, y2);
+  g.fillStyle(col || INK, 1).fillTriangle(x2, y2, x2 - Math.cos(a - .5) * 18, y2 - Math.sin(a - .5) * 18, x2 - Math.cos(a + .5) * 18, y2 - Math.sin(a + .5) * 18);
+}
+
+/* ---------------- textures ---------------- */
+function starPts(cx, cy, ri, ro) { const a = []; for (let k = 0; k < 10; k++) { const r = k % 2 ? ri : ro, t = -Math.PI / 2 + k * Math.PI / 5; a.push({ x: cx + Math.cos(t) * r, y: cy + Math.sin(t) * r }); } return a; }
+function makeTextures(s) {
+  const mk = () => s.make.graphics({ x: 0, y: 0, add: false });
+  SEATC.forEach((c, i) => {
+    const g = mk();
+    g.fillStyle(0x000000, 0);
+    const dark = Phaser.Display.Color.IntegerToColor(c).darken(30).color;
+    g.fillStyle(dark, 1).fillEllipse(24, 92, 22, 12).fillEllipse(48, 92, 22, 12);
+    g.lineStyle(3, INK, 1).strokeEllipse(24, 92, 22, 12).strokeEllipse(48, 92, 22, 12);
+    g.fillStyle(c, 1).fillEllipse(36, 52, 62, 78); g.lineStyle(4, INK, 1).strokeEllipse(36, 52, 62, 78);
+    g.fillStyle(0xffffff, .38).fillEllipse(20, 28, 11, 22);
+    g.fillStyle(0xffffff, 1).fillCircle(26, 44, 10).fillCircle(48, 44, 10);
+    g.lineStyle(3, INK, 1).strokeCircle(26, 44, 10).strokeCircle(48, 44, 10);
+    g.fillStyle(INK, 1).fillCircle(29, 46, 4.5).fillCircle(51, 46, 4.5);
+    g.fillStyle(0xff7aa8, .55).fillCircle(15, 60, 5).fillCircle(59, 60, 5);
+    g.lineStyle(3, INK, 1).beginPath(); g.arc(37, 62, 9, .25, Math.PI - .25); g.strokePath();
+    g.generateTexture('bean' + i, 72, 104);
+    const b = mk();
+    b.fillStyle(0xb9773a, 1).fillPoints([{ x: 4, y: 10 }, { x: 96, y: 10 }, { x: 84, y: 44 }, { x: 16, y: 44 }], true);
+    b.lineStyle(3, 0x6d4220, 1); for (let k = 1; k < 5; k++) b.lineBetween(4 + k * 18, 12, 16 + k * 14, 43);
+    b.lineStyle(4, INK, 1).strokePoints([{ x: 4, y: 10 }, { x: 96, y: 10 }, { x: 84, y: 44 }, { x: 16, y: 44 }], true);
+    b.fillStyle(c, 1).fillRoundedRect(0, 2, 100, 14, 7); b.lineStyle(4, INK, 1).strokeRoundedRect(0, 2, 100, 14, 7);
+    b.generateTexture('basket' + i, 100, 48);
+  });
+  let g = mk();
+  g.fillStyle(0xe83a4a, 1).fillCircle(28, 32, 22); g.lineStyle(4, INK, 1).strokeCircle(28, 32, 22);
+  g.fillStyle(0xffffff, .45).fillEllipse(19, 22, 8, 12);
+  g.fillStyle(0x3ddc84, 1).fillEllipse(34, 8, 16, 9); g.lineStyle(3, INK, 1).strokeEllipse(34, 8, 16, 9).lineBetween(28, 12, 28, 18);
+  g.generateTexture('apple', 56, 56);
+  g = mk(); g.fillStyle(0xffd23f, 1).fillPoints(starPts(28, 30, 12, 26), true); g.lineStyle(4, INK, 1).strokePoints(starPts(28, 30, 12, 26), true); g.fillStyle(0xffffff, .6).fillCircle(24, 24, 3); g.generateTexture('gold', 56, 58);
+  g = mk(); g.fillStyle(0xa8b79a, 1).fillRoundedRect(14, 4, 22, 40, 8).fillRoundedRect(14, 32, 36, 18, 9);
+  g.lineStyle(4, INK, 1).strokeRoundedRect(14, 4, 22, 40, 8).strokeRoundedRect(14, 32, 36, 18, 9);
+  g.fillStyle(0x7ea36a, 1).fillRect(14, 8, 22, 6); g.fillStyle(0x66d27a, .8).fillCircle(8, 14, 4).fillCircle(44, 12, 3).fillCircle(4, 28, 3).fillCircle(48, 24, 4);
+  g.generateTexture('sock', 56, 56);
+  g = mk(); g.fillStyle(0x2a2540, 1).fillCircle(32, 44, 26); g.lineStyle(4, INK, 1).strokeCircle(32, 44, 26);
+  g.fillStyle(0xffffff, .35).fillEllipse(22, 34, 10, 14); g.fillStyle(0x6d4220, 1).fillRect(29, 10, 6, 10);
+  g.fillStyle(0xffd23f, 1).fillPoints(starPts(32, 8, 4, 9), true); g.lineStyle(3, INK, 1).strokeRect(29, 10, 6, 10);
+  g.fillStyle(0xff5a6e, 1).fillCircle(40, 52, 4);
+  g.generateTexture('bomb', 64, 74);
+  g = mk(); g.fillStyle(0xffffff, 1).fillRect(0, 0, 12, 8); g.generateTexture('conf', 12, 8);
+  g = mk(); g.fillStyle(0x000000, .28).fillEllipse(36, 8, 52, 14); g.generateTexture('shadow', 72, 16);
+}
+
+/* ---------------- pads (on-screen joystick + button) ---------------- */
+class Pads {
+  constructor(s, n, cfg) {
+    this.s = s; this.n = n; this.cfg = cfg; this.g = s.add.graphics().setDepth(900); this.lab = [];
+    for (let i = 0; i < n; i++) {
+      const L = SEATPOS[i];
+      if (cfg.btn) this.lab[i] = T(s, L.bx, L.by, typeof cfg.btn === 'string' ? cfg.btn : 'ปุ่ม', 26, '#1d0f3b', { depth: 901, style: { strokeThickness: 0 } });
+    }
+  }
+  update() {
+    const g = this.g; g.clear();
+    for (let i = 0; i < this.n; i++) {
+      const L = SEATPOS[i], st = Ctl.st[i], col = SEATC[i];
+      if (this.cfg.joy) {
+        g.fillStyle(col, .2).fillCircle(L.jx, L.jy, JR + 6); g.lineStyle(5, col, .75).strokeCircle(L.jx, L.jy, JR + 6);
+        g.fillStyle(col, st.joyId != null ? .95 : .6).fillCircle(L.jx + st.kx, L.jy + st.ky, 34);
+        g.lineStyle(4, INK, .8).strokeCircle(L.jx + st.kx, L.jy + st.ky, 34);
+      }
+      if (this.cfg.btn) {
+        g.fillStyle(col, st.btn ? .95 : .45).fillCircle(L.bx, L.by, st.btn ? BR - 4 : BR);
+        g.lineStyle(5, INK, .75).strokeCircle(L.bx, L.by, BR);
+        const cl = Ctl.cool[i]; if (cl > 0) { g.fillStyle(INK, .55).slice(L.bx, L.by, BR, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * cl, false); g.fillPath(); }
+      }
+    }
+  }
+}
+
+/* ---------------- minigames ---------------- */
+const CATCH = {
+  id: 'catch', title: 'ตะกร้ารับของ', min: 1, joy: true, btn: false, dur: 30, hud: 'score', bg: ['#ffd36e', '#ff8fa3'],
+  tut: [
+    { t: 'ลากจอยเพื่อ\nเดินไปรับของ', draw: (s, c) => { jIcon(s, c, 62, 10); img(s, c, 'bean0', -70, 28, .8); img(s, c, 'basket0', -70, -34, .7); arrow(s, c, -30, 20, -4, 20); } },
+    { t: 'ผลไม้ +1\nดาวทอง +3', draw: (s, c) => { img(s, c, 'apple', -45, -55); img(s, c, 'gold', 48, -30, 1.1); img(s, c, 'basket1', 0, 48); arrow(s, c, -45, -22, -20, 18); } },
+    { t: 'ถุงเท้าเหม็น -2\nหลบให้ไว!', draw: (s, c) => { img(s, c, 'sock', 0, -30, 1.5); tx(s, c, 0, 52, '-2', '#e83a4a', 64); } }
+  ],
+  create(s, c) {
+    const n = c.n, P = [], items = [], sc = Array(n).fill(0); let spawn = .6;
+    const xs = [320, 540, 740, 960];
+    for (let i = 0; i < n; i++) { const b = mkBean(s, i, xs[i], 600); const bk = s.add.image(0, 0, 'basket' + i).setDepth(6); P.push({ b, bk, x: b.x, y: b.y }); }
+    function spawnItem(el) {
+      const r = Math.random(), k = r < .12 ? 'gold' : r < .4 ? 'sock' : 'apple';
+      items.push({ im: s.add.image(rnd(60, 1220), -40, k).setDepth(5), k, v: k === 'gold' ? 3 : k === 'sock' ? -2 : 1, vy: rnd(170, 300) + el * 4, sp: rnd(-2.5, 2.5) });
+    }
+    return {
+      update(t, dt) {
+        spawn -= dt; if (spawn <= 0) { spawnItem(t); spawn = Math.max(.28, .72 - t * .014) + Math.random() * .12; }
+        P.forEach((p, i) => {
+          const v = c.inp(i); p.x = clamp(p.x + v.x * 340 * dt, 50, 1230); p.y = clamp(p.y + v.y * 340 * dt, 210, 670);
+          p.b.put(p.x, p.y); p.b.rotation = Math.sin(t * 14 + i) * .12 * Math.hypot(v.x, v.y);
+          p.bk.setPosition(p.x, p.y - 66).setRotation(p.b.rotation * .6);
+        });
+        for (let k = items.length - 1; k >= 0; k--) {
+          const it = items[k]; it.im.y += it.vy * dt; it.im.rotation += it.sp * dt;
+          let got = -1;
+          for (let i = 0; i < n; i++) { const p = P[i]; if (Math.abs(it.im.x - p.x) < 56 && it.im.y > p.y - 96 && it.im.y < p.y - 46) { got = i; break; } }
+          if (got >= 0) {
+            const p = P[got]; sc[got] = Math.max(0, sc[got] + it.v); c.setScore(got, sc[got]);
+            if (it.v > 0) { Snd.play('good'); pop(s, p.x, p.y - 100, '+' + it.v, '#ffd23f'); squash(s, p.bk, 1.2); }
+            else { Snd.play('bad'); pop(s, p.x, p.y - 100, 'ยี้! -2', '#ff7a8a'); s.tweens.add({ targets: p.b, angle: { from: -14, to: 14 }, duration: 60, yoyo: true, repeat: 3, onComplete: () => p.b.setAngle(0) }); }
+            it.im.destroy(); items.splice(k, 1);
+          } else if (it.im.y > 780) { it.im.destroy(); items.splice(k, 1); }
+        }
+      },
+      scores: () => sc
+    };
+  }
+};
+
+const BOMB = {
+  id: 'bomb', title: 'ระเบิดส่งต่อ', min: 2, joy: true, btn: 'โยน', dur: 80, hud: 'none', bg: ['#3ad0c8', '#2a5fd6'],
+  tut: [
+    { t: 'ลากจอยเพื่อ\nวิ่งหนีไปมา', draw: (s, c) => { jIcon(s, c, 62, 5); img(s, c, 'bean1', -70, 20, .85); arrow(s, c, -35, 20, -6, 20); } },
+    { t: 'ถือระเบิดอยู่?\nกดปุ่มโยนใส่\nคนใกล้สุด', draw: (s, c) => { bIcon(s, c, 62, 20, 0xff5a6e); img(s, c, 'bean0', -80, 30, .6); img(s, c, 'bomb', -80, -30, .7); img(s, c, 'bean2', -10, 30, .6); arrow(s, c, -70, -48, -18, -40); } },
+    { t: 'ระเบิดแตกใส่ใคร\nคนนั้นกระเด็น!\nคนสุดท้ายชนะ', draw: (s, c) => { tx(s, c, 0, -35, 'บึ้ม!', '#e83a4a', 62); img(s, c, 'bean3', 0, 40, .7).setAngle(25); } }
+  ],
+  create(s, c) {
+    const n = c.n, st = [[380, 290], [900, 290], [380, 500], [900, 500]], P = [], order = [];
+    for (let i = 0; i < n; i++) { const b = mkBean(s, i, st[i][0], st[i][1]); P.push({ b, x: b.x, y: b.y, alive: true }); }
+    const bomb = s.add.image(0, 0, 'bomb').setDepth(20).setVisible(false);
+    let holder = -1, fuse = 0, cd = 0, flying = false, wait = 1.2, over = false;
+    const alive = () => P.map((p, i) => p.alive ? i : -1).filter(i => i >= 0);
+    function give() { const a = alive(); holder = a[Math.floor(Math.random() * a.length)]; fuse = rnd(5, 9); cd = .5; bomb.setVisible(true).setTint(0xffffff); Snd.play('tap'); }
+    function explode() {
+      const p = P[holder]; p.alive = false; order.push(holder); bomb.setVisible(false);
+      Snd.play('boom'); s.cameras.main.shake(250, .014); confetti(s, p.x, p.y - 30, 46, 1.3);
+      pop(s, p.x, p.y - 80, 'บึ้ม!', '#ffd23f', 64);
+      p.b.sh.setVisible(false); p.b.setTint(0x333333);
+      s.tweens.add({ targets: p.b, x: p.x + (Math.random() < .5 ? -1 : 1) * 520, y: -120, angle: 900, duration: 1000, ease: 'Cubic.easeOut' });
+      holder = -1;
+      if (alive().length <= 1) { over = true; s.time.delayedCall(1100, () => c.finish()); } else wait = 1.7;
+    }
+    return {
+      update(t, dt) {
+        if (holder < 0 && wait > 0 && !over) { wait -= dt; if (wait <= 0) give(); }
+        P.forEach((p, i) => {
+          if (!p.alive) return; const v = c.inp(i), sp = i === holder ? 245 : 345;
+          p.x = clamp(p.x + v.x * sp * dt, 70, 1210); p.y = clamp(p.y + v.y * sp * dt, 150, 640);
+        });
+        for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+          if (!P[i].alive || !P[j].alive) continue;
+          const dx = P[j].x - P[i].x, dy = P[j].y - P[i].y, d = Math.hypot(dx, dy) || 1;
+          if (d < 66) { const k = (66 - d) / 2; P[i].x -= dx / d * k; P[i].y -= dy / d * k; P[j].x += dx / d * k; P[j].y += dy / d * k; }
+        }
+        P.forEach((p, i) => { if (p.alive) { const v = c.inp(i); p.b.put(p.x, p.y); p.b.rotation = Math.sin(t * 14 + i) * .1 * Math.hypot(v.x, v.y); } });
+        if (holder >= 0) {
+          fuse -= dt; cd -= dt;
+          if (!flying) {
+            const h = P[holder]; bomb.setPosition(h.x, h.y - 80 + Math.sin(t * 20) * 3);
+            bomb.setScale(1 + .12 * Math.sin(t * (8 + (6 - Math.min(fuse, 6)) * 4)));
+            bomb.setTint(fuse < 2 && Math.floor(t * 10) % 2 ? 0xff6666 : 0xffffff);
+            if (cd <= 0 && c.inp(holder).pressed) {
+              let tg = -1, bd = 1e9; alive().forEach(i => { if (i === holder) return; const d = Math.hypot(P[i].x - h.x, P[i].y - h.y); if (d < bd) { bd = d; tg = i; } });
+              if (tg >= 0) {
+                flying = true; Snd.play('throw'); const o = { k: 0 }, from = { x: bomb.x, y: bomb.y };
+                s.tweens.add({ targets: o, k: 1, duration: 300, ease: 'Sine.easeInOut',
+                  onUpdate: () => { const T2 = P[tg]; bomb.x = from.x + (T2.x - from.x) * o.k; bomb.y = from.y + (T2.y - 80 - from.y) * o.k - 90 * Math.sin(Math.PI * o.k); bomb.rotation = o.k * 10; },
+                  onComplete: () => { holder = tg; flying = false; cd = .5; bomb.rotation = 0; squash(s, P[tg].b); } });
+              }
+            }
+            if (fuse <= 0) explode();
+          } else if (fuse <= 0) fuse = .05;
+        }
+      },
+      scores: () => P.map((p, i) => p.alive ? 1000 : order.indexOf(i))
+    };
+  }
+};
+
+const BUMP = {
+  id: 'bump', title: 'รถชนลานแคบ', min: 2, joy: true, btn: 'พุ่ง', dur: 60, hud: 'none', bg: ['#8a5a3a', '#3b2214'],
+  tut: [
+    { t: 'ลากจอยเพื่อ\nขับถั่วกลิ้ง', draw: (s, c) => { jIcon(s, c, 62, 5); img(s, c, 'bean2', -70, 20, .85); arrow(s, c, -35, 20, -6, 20); } },
+    { t: 'กดปุ่มเพื่อพุ่งชน\n(มีคูลดาวน์)', draw: (s, c) => { bIcon(s, c, 62, 20, 0x3fa7ff); img(s, c, 'bean1', -75, 20, .65); img(s, c, 'bean0', -5, 20, .65); arrow(s, c, -52, 20, -30, 20); } },
+    { t: 'ดันคู่แข่งตกจาน!\nพิซซ่าเล็กลงเรื่อยๆ', draw: (s, c) => { const g = addG(s, c); g.fillStyle(0xd98a3d, 1).fillCircle(0, 0, 70).fillStyle(0xffc857, 1).fillCircle(0, 0, 58); g.fillStyle(0xd7263d, 1).fillCircle(-20, -14, 9).fillCircle(18, 10, 9).fillCircle(-6, 26, 8); img(s, c, 'bean3', 74, -34, .45).setAngle(40); } }
+  ],
+  create(s, c) {
+    const n = c.n, CX = 640, CY = 385, R0 = 315; let R = R0;
+    const g = s.add.graphics().setDepth(1), ring = s.add.graphics().setDepth(2), cars = [], order = [];
+    const pep = Array.from({ length: 9 }, () => ({ a: Math.random() * 6.28, r: rnd(.15, .85), z: rnd(14, 24) }));
+    for (let i = 0; i < n; i++) {
+      const ang = i / n * Math.PI * 2 + Math.PI / 4, x = CX + Math.cos(ang) * 170, y = CY + Math.sin(ang) * 170;
+      const b = mkBean(s, i, x, y, .85); cars.push({ b, x, y, vx: 0, vy: 0, alive: true, cd: 0, hx: 0, hy: -1, bump: 0 });
+    }
+    let over = false;
+    const alive = () => cars.filter(k => k.alive).length;
+    return {
+      update(t, dt) {
+        R = R0 - (R0 - 185) * clamp((t - 6) / 46, 0, 1);
+        g.clear(); g.fillStyle(0xd98a3d, 1).fillCircle(CX, CY, R + 18); g.lineStyle(5, INK, 1).strokeCircle(CX, CY, R + 18);
+        g.fillStyle(0xffc857, 1).fillCircle(CX, CY, R);
+        pep.forEach(p => { const rr = p.r * (R - 40); g.fillStyle(0xd7263d, 1).fillCircle(CX + Math.cos(p.a) * rr, CY + Math.sin(p.a) * rr, p.z * R / R0); });
+        ring.clear();
+        cars.forEach((k, i) => {
+          if (!k.alive) return;
+          const v = c.inp(i), m = Math.hypot(v.x, v.y);
+          k.vx += v.x * 950 * dt; k.vy += v.y * 950 * dt;
+          const f = Math.exp(-1.7 * dt); k.vx *= f; k.vy *= f;
+          const sp = Math.hypot(k.vx, k.vy); if (sp > 560) { k.vx *= 560 / sp; k.vy *= 560 / sp; }
+          if (m > .3) { k.hx = v.x / m; k.hy = v.y / m; }
+          k.cd = Math.max(0, k.cd - dt); k.bump = Math.max(0, k.bump - dt);
+          if (v.pressed && k.cd <= 0) { k.vx += k.hx * 820; k.vy += k.hy * 820; k.cd = 1.5; Snd.play('dash'); squash(s, k.b, 1.35); }
+          c.cool(i, k.cd > 0 ? k.cd / 1.5 : 0);
+          k.x += k.vx * dt; k.y += k.vy * dt;
+        });
+        for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+          const a = cars[i], b = cars[j]; if (!a.alive || !b.alive) continue;
+          const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+          if (d < 74) {
+            const nx = dx / d, ny = dy / d, ov = (74 - d) / 2;
+            a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
+            const vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+            if (vn < 0) {
+              const j2 = -(1 + 1.15) * vn / 2; a.vx -= j2 * nx; a.vy -= j2 * ny; b.vx += j2 * nx; b.vy += j2 * ny;
+              if (-vn > 220 && a.bump <= 0) { a.bump = b.bump = .15; Snd.play('boing'); squash(s, a.b, 1.3); squash(s, b.b, 1.3); s.cameras.main.shake(90, .004); }
+            }
+          }
+        }
+        cars.forEach((k, i) => {
+          if (!k.alive) return;
+          k.b.put(k.x, k.y); ring.lineStyle(9, SEATC[i], 1).strokeCircle(k.x, k.y + 6, 40); ring.lineStyle(3, INK, 1).strokeCircle(k.x, k.y + 6, 45).strokeCircle(k.x, k.y + 6, 35);
+          if (Math.hypot(k.x - CX, k.y - CY) > R + 6) {
+            k.alive = false; order.push(i); Snd.play('fall');
+            pop(s, clamp(k.x, 90, 1190), clamp(k.y, 120, 640), Phaser.Utils.Array.GetRandom(['ว้ายยย!', 'ไม่นะ!', 'โอ๊ย!', 'ซวยแล้ว!']), '#fff6e0', 42);
+            k.b.sh.setVisible(false);
+            s.tweens.add({ targets: k.b, scale: 0, angle: 360, y: k.y + 90, duration: 750, ease: 'Quad.easeIn' });
+            if (alive() <= 1 && !over) { over = true; s.time.delayedCall(1000, () => c.finish()); }
+          }
+        });
+      },
+      scores: () => cars.map((k, i) => k.alive ? 1000 - Math.hypot(k.x - CX, k.y - CY) / 1000 : order.indexOf(i))
+    };
+  }
+};
+const GAMES = [CATCH, BOMB, BUMP];
+
+/* ---------------- match state ---------------- */
+const S = { n: 1, round: 0, rounds: 5, total: [], lastId: null, def: null, last: null };
+const TUT_LABEL = { always: 'ป้ายสอน: ทุกครั้ง', first: 'ป้ายสอน: ครั้งแรกของเกม', off: 'ป้ายสอน: ปิด' };
+const TUT_NEXT = { always: 'first', first: 'off', off: 'always' };
+function startMatch(scene, n) {
+  Object.assign(S, { n, round: 0, rounds: Store.load().set.rounds, total: Array(n).fill(0), lastId: null });
+  nextRound(scene);
+}
+function nextRound(scene) {
+  S.round++;
+  const pool = GAMES.filter(g => g.min <= S.n); let cand = pool.filter(g => g.id !== S.lastId); if (!cand.length) cand = pool;
+  S.def = Phaser.Utils.Array.GetRandom(cand); S.lastId = S.def.id;
+  const d = Store.load(), show = d.set.tut === 'always' || (d.set.tut === 'first' && !d.seen[S.def.id]);
+  scene.scene.start(show ? 'Tutorial' : 'Play');
+}
+function ranksOf(scores) { return scores.map(v => 1 + scores.filter(w => w > v).length); }
+
+/* ---------------- tutorial card ---------------- */
+function buildCard(s, def, o) {
+  const c = s.add.container(W / 2, H / 2).setDepth(500), g = s.add.graphics();
+  g.fillStyle(INK, 1).fillRoundedRect(-420, -296, 840, 604, 34);
+  g.fillStyle(CREAM, 1).fillRoundedRect(-420, -306, 840, 604, 34); g.lineStyle(6, INK, 1).strokeRoundedRect(-420, -306, 840, 604, 34);
+  c.add(g);
+  c.add(T(s, 0, -262, def.title, 54, '#1d0f3b', { style: { strokeThickness: 0 } }));
+  c.add(T(s, 0, -212, 'วิธีเล่น', 26, '#7a5cd6', { style: { strokeThickness: 0 } }));
+  def.tut.forEach((p, k) => {
+    const px = -270 + k * 270, pg = s.add.graphics(); pg.fillStyle(0xeadfff, 1).fillRoundedRect(px - 125, -180, 250, 300, 22); c.add(pg);
+    const pc = s.add.container(px, -95); c.add(pc); p.draw(s, pc);
+    c.add(T(s, px, 55, p.t, 25, '#1d0f3b', { style: { strokeThickness: 0, wordWrap: { width: 222 } } }));
+  });
+  const set = Store.load().set;
+  const mb = Btn(s, -230, 235, 330, 62, TUT_LABEL[set.tut], () => { set.tut = TUT_NEXT[set.tut]; Store.save(); mb.setLabel(TUT_LABEL[set.tut]); }, 0xc9b6ff, 24);
+  const sb = Btn(s, 230, 235, 320, 74, o.startLabel, o.onStart, 0x3ddc84, 36);
+  const xb = Btn(s, 380, -262, 56, 56, '✕', o.onStart, 0xff5a6e, 26);
+  c.add([mb, sb, xb]);
+  c.setScale(.6).setAlpha(0); s.tweens.add({ targets: c, scale: 1, alpha: 1, duration: 260, ease: 'Back.easeOut' });
+  return c;
+}
+
+/* ---------------- scenes ---------------- */
+class Boot extends Phaser.Scene {
+  constructor() { super('Boot'); }
+  create() { makeTextures(this); this.scene.start('Menu'); }
+}
+
+class Menu extends Phaser.Scene {
+  constructor() { super('Menu'); }
+  create() {
+    Ctl.off(); bgGrad(this, '#3a1f7a', '#1d0f3b'); floaty(this);
+    const t = T(this, W / 2, 150, 'ถั่วป่วน', 130, '#ffd23f', { style: { strokeThickness: 14 } });
+    this.tweens.add({ targets: t, angle: { from: -2, to: 2 }, scale: { from: 1, to: 1.05 }, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    T(this, W / 2, 250, 'ปาร์ตี้มินิเกมปั่นๆ 1–4 คน บนจอเดียว', 32, '#fff6e0');
+    Btn(this, W / 2, 380, 380, 96, 'เล่นเลย!', () => this.scene.start('Lobby'), 0x3ddc84, 52);
+    Btn(this, W / 2 - 200, 500, 280, 74, 'อันดับ', () => this.scene.start('Ranking'), 0xffd23f, 34);
+    Btn(this, W / 2 + 200, 500, 280, 74, 'ตั้งค่า', () => this.scene.start('Settings'), 0x3fa7ff, 34);
+    Btn(this, W / 2, 600, 400, 56, 'ทดสอบการควบคุม 4 คน', () => this.scene.start('Test'), 0xc9b6ff, 24);
+    for (let i = 0; i < 4; i++) {
+      const b = this.add.image(190 + i * 300, 660, 'bean' + i).setScale(1.1).setDepth(5);
+      this.tweens.add({ targets: b, y: 640, scaleY: 1.2, scaleX: 1.0, duration: 420 + i * 70, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', delay: i * 120 });
+    }
+  }
+}
+
+class Lobby extends Phaser.Scene {
+  constructor() { super('Lobby'); }
+  create() {
+    Ctl.off(); bgGrad(this, '#3a1f7a', '#1d0f3b'); floaty(this);
+    T(this, W / 2, 90, 'ใครเล่นบ้าง?', 70, '#ffd23f');
+    T(this, W / 2, 160, 'แต่ละคนนั่งประจำมุมของตัวเอง', 30);
+    for (let k = 0; k < 4; k++) {
+      const x = 240 + k * 270, c = Btn(this, x, 330, 230, 180, '', () => startMatch(this, k + 1), SEATC[k], 20);
+      const num = T(this, x, 310, String(k + 1), 100, '#1d0f3b', { style: { strokeThickness: 0 } }); T(this, x, 395, 'คน', 34, '#1d0f3b', { style: { strokeThickness: 0 } });
+      void c; void num;
+    }
+    // mini screen diagram of the seats
+    const g = this.add.graphics(); g.fillStyle(0x2e1a63, 1).fillRoundedRect(W / 2 - 170, 470, 340, 190, 18); g.lineStyle(5, CREAM, 1).strokeRoundedRect(W / 2 - 170, 470, 340, 190, 18);
+    [[-135, -60], [135, -60], [-135, 60], [135, 60]].forEach((p, i) => { this.add.image(W / 2 + p[0], 565 + p[1], 'bean' + i).setScale(.42); });
+    T(this, W / 2, 565, 'จอ', 32, '#fff6e0');
+    Btn(this, 130, 660, 200, 60, '‹ กลับ', () => this.scene.start('Menu'), 0xfff6e0, 28);
+  }
+}
+
+class Tutorial extends Phaser.Scene {
+  constructor() { super('Tutorial'); }
+  create() {
+    Ctl.off(); this.input.addPointer(4);
+    const def = S.def, d = Store.load(); d.seen[def.id] = true; Store.save();
+    bgGrad(this, def.bg[0], def.bg[1]);
+    T(this, W / 2, 34, 'รอบที่ ' + S.round + ' / ' + S.rounds, 30);
+    let started = false;
+    const go = () => { if (started) return; started = true; this.scene.start('Play'); };
+    buildCard(this, def, { startLabel: 'เริ่มเลย!', onStart: go });
+    const ready = Array(S.n).fill(false), btns = [];
+    const pos = [[105, 75], [1175, 75], [105, 645], [1175, 645]];
+    for (let i = 0; i < S.n; i++) {
+      const b = Btn(this, pos[i][0], pos[i][1], 190, 84, 'พร้อม!', () => {
+        ready[i] = !ready[i]; b.setLabel(ready[i] ? '✓ พร้อมแล้ว' : 'พร้อม!'); b.tint(ready[i] ? 0x3ddc84 : SEATC[i]);
+        if (ready.every(Boolean)) this.time.delayedCall(350, go);
+      }, SEATC[i], 30);
+      btns.push(b);
+    }
+  }
+}
+
+class Play extends Phaser.Scene {
+  constructor() { super('Play'); }
+  create() {
+    const def = S.def, n = S.n; this.def = def;
+    bgGrad(this, def.bg[0], def.bg[1]);
+    Ctl.setup(n, { joy: def.joy, btn: def.btn }); this.pads = new Pads(this, n, { joy: def.joy, btn: def.btn });
+    this.elapsed = 0; this.playing = false; this.ended = false;
+    this.scoreT = [];
+    if (def.hud === 'score') for (let i = 0; i < n; i++) {
+      const L = SEATPOS[i], hx = L.jx - 50, hy = L.jy < 360 ? L.jy + 112 : L.jy - 112;
+      this.add.image(hx, hy, 'bean' + i).setScale(.36).setDepth(850);
+      this.scoreT[i] = T(this, hx + 46, hy, '0', 40, '#fff6e0', { depth: 850, ox: 0 });
+    }
+    this.timerT = T(this, W / 2, 86, String(def.dur), 44, '#fff6e0', { depth: 850 });
+    const pb = this.add.circle(W / 2, 34, 25, CREAM).setStrokeStyle(4, INK).setDepth(950).setInteractive({ useHandCursor: true });
+    T(this, W / 2, 33, 'II', 24, '#1d0f3b', { depth: 951, style: { strokeThickness: 0 } });
+    pb.on('pointerup', () => this.pause());
+    T(this, 28, 20, 'รอบ ' + S.round + '/' + S.rounds, 24, '#fff6e0', { depth: 850, ox: .0, oy: .5 }).setPosition(W / 2 + 70, 34).setOrigin(0, .5);
+    const self = this;
+    const c = {
+      n, inp: i => Ctl.get(i), finish: () => self.finish(), cool: (i, f) => { Ctl.cool[i] = f; },
+      setScore: (i, v) => { const t = self.scoreT[i]; if (t) { t.setText(String(v)); self.tweens.add({ targets: t, scale: { from: 1.5, to: 1 }, duration: 160 }); } }
+    };
+    this.inst = def.create(this, c);
+    this.count(['3', '2', '1', 'ลุย!'], 0);
+  }
+  big(str, color) {
+    const t = T(this, W / 2, H / 2 - 30, str, 170, color || '#ffd23f', { depth: 960, style: { strokeThickness: 16 } });
+    t.setScale(1.7).setAlpha(0); this.tweens.add({ targets: t, scale: 1, alpha: 1, duration: 220, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, alpha: 0, scale: 1.25, delay: 520, duration: 260, onComplete: () => t.destroy() });
+  }
+  count(arr, k) {
+    if (k >= arr.length) return;
+    this.big(arr[k], k === arr.length - 1 ? '#3ddc84' : '#ffd23f'); Snd.play(k === arr.length - 1 ? 'go' : 'count');
+    if (k === arr.length - 1) this.playing = true;
+    this.time.delayedCall(800, () => this.count(arr, k + 1));
+  }
+  pause() { if (this.ended) return; Ctl.enabled = false; this.scene.launch('Pause'); this.scene.pause(); }
+  finish() {
+    if (this.ended) return; this.ended = true; this.playing = false;
+    this.big('จบ!', '#ff5a6e');
+    this.time.delayedCall(1300, () => { S.last = this.inst.scores(); Ctl.off(); this.scene.start('Results'); });
+  }
+  update(time, delta) {
+    const dt = Math.min(delta / 1000, .05);
+    if (this.playing) {
+      this.elapsed += dt; this.inst.update(this.elapsed, dt);
+      const rem = Math.max(0, this.def.dur - this.elapsed); this.timerT.setText(String(Math.ceil(rem)));
+      if (rem <= 0) this.finish();
+    }
+    Ctl.endFrame(); this.pads.update();
+  }
+}
+
+class Pause extends Phaser.Scene {
+  constructor() { super('Pause'); }
+  create() {
+    const def = S.def, set = Store.load().set; let card = null;
+    this.add.rectangle(W / 2, H / 2, W, H, INK, .78).setInteractive();
+    T(this, W / 2, 110, 'พักก่อน', 80, '#ffd23f');
+    Btn(this, W / 2, 230, 420, 82, 'เล่นต่อ', () => { Ctl.enabled = true; this.scene.stop(); this.scene.resume('Play'); }, 0x3ddc84, 42);
+    Btn(this, W / 2, 330, 420, 70, 'ดูวิธีเล่น', () => {
+      if (card && card.active) card.destroy();
+      card = buildCard(this, def, { startLabel: 'ปิด', onStart: () => { if (card) card.destroy(); } });
+    }, 0xffd23f, 32);
+    const tb = Btn(this, W / 2, 420, 420, 66, TUT_LABEL[set.tut], () => { set.tut = TUT_NEXT[set.tut]; Store.save(); tb.setLabel(TUT_LABEL[set.tut]); }, 0xc9b6ff, 26);
+    const sb = Btn(this, W / 2, 504, 420, 66, set.sfx ? 'เสียง: เปิด' : 'เสียง: ปิด', () => { set.sfx = !set.sfx; Store.save(); sb.setLabel(set.sfx ? 'เสียง: เปิด' : 'เสียง: ปิด'); }, 0x3fa7ff, 28);
+    Btn(this, W / 2, 604, 420, 66, 'ออกไปหน้าหลัก', () => { this.scene.stop('Play'); Ctl.off(); this.scene.start('Menu'); }, 0xff5a6e, 28);
+  }
+}
+
+class Results extends Phaser.Scene {
+  constructor() { super('Results'); }
+  create() {
+    Ctl.off(); const n = S.n, sc = S.last, rk = ranksOf(sc), def = S.def;
+    bgGrad(this, '#3a1f7a', '#1d0f3b'); floaty(this);
+    T(this, W / 2, 60, 'จบรอบที่ ' + S.round + ' · ' + def.title, 44, '#ffd23f');
+    const order = sc.map((v, i) => i).sort((a, b) => rk[a] - rk[b] || a - b);
+    const quips = ['เทพถั่วตัวจริง!', 'เกือบเป็นเทพ!', 'ยังพอไหว...', 'ถั่วเน่าประจำวัน'];
+    order.forEach((i, row) => {
+      const y = 190 + row * 100, pts = n > 1 ? n - rk[i] + 1 : sc[i];
+      S.total[i] += pts;
+      const g = this.add.graphics(); g.fillStyle(SEATC[i], 1).fillRoundedRect(250, y - 40, 780, 82, 24); g.lineStyle(5, INK, 1).strokeRoundedRect(250, y - 40, 780, 82, 24);
+      const b = this.add.image(310, y, 'bean' + i).setScale(.62);
+      T(this, 400, y, (n > 1 ? '#' + rk[i] + '  ' : '') + NAMES[i], 40, '#1d0f3b', { ox: 0, style: { strokeThickness: 0 } });
+      T(this, 800, y, n > 1 ? quips[Math.min(rk[i] - 1, 3)] : 'ได้ ' + sc[i] + ' แต้ม', 28, '#1d0f3b', { style: { strokeThickness: 0 } });
+      T(this, 975, y, '+' + pts, 46, '#fff6e0', { ox: 1 });
+      g.setAlpha(0); b.setAlpha(0);
+      this.tweens.add({ targets: [g, b], alpha: 1, x: { from: -80, to: 0 }, duration: 320, delay: 150 * row, ease: 'Back.easeOut' });
+      if (rk[i] === 1 && n > 1) this.time.delayedCall(300, () => confetti(this, 310, y, 26, .9));
+    });
+    if (n > 1) Snd.play('win');
+    const last = S.round >= S.rounds;
+    Btn(this, W / 2, 640, 420, 78, last ? 'ดูผลรวม' : 'รอบต่อไป', () => last ? this.scene.start('MatchEnd') : nextRound(this), 0x3ddc84, 40);
+  }
+}
+
+class MatchEnd extends Phaser.Scene {
+  constructor() { super('MatchEnd'); }
+  create() {
+    Ctl.off(); const n = S.n, tot = S.total, rk = ranksOf(tot), d = Store.load();
+    bgGrad(this, '#3a1f7a', '#1d0f3b'); floaty(this);
+    if (n > 1) tot.forEach((v, i) => { const r = d.rank[i] || (d.rank[i] = { matches: 0, wins: 0, pts: 0 }); r.matches++; r.pts += v; if (rk[i] === 1) r.wins++; });
+    else d.solo = Math.max(d.solo || 0, tot[0]);
+    Store.save();
+    const order = tot.map((v, i) => i).sort((a, b) => rk[a] - rk[b] || a - b);
+    T(this, W / 2, 70, n > 1 ? 'ผู้ชนะ!' : 'คะแนนรวมของคุณ', 80, '#ffd23f');
+    order.forEach((i, row) => {
+      const y = 200 + row * 100;
+      const g = this.add.graphics(); g.fillStyle(SEATC[i], 1).fillRoundedRect(300, y - 40, 680, 82, 24); g.lineStyle(5, INK, 1).strokeRoundedRect(300, y - 40, 680, 82, 24);
+      this.add.image(360, y, 'bean' + i).setScale(.62);
+      T(this, 450, y, (n > 1 ? '#' + rk[i] + '  ' : '') + NAMES[i], 40, '#1d0f3b', { ox: 0, style: { strokeThickness: 0 } });
+      T(this, 955, y, tot[i] + ' แต้ม', 44, '#fff6e0', { ox: 1 });
+    });
+    if (n === 1) T(this, W / 2, 330, 'สถิติเดี่ยวสูงสุด: ' + d.solo, 34);
+    const w = order[0]; confetti(this, 640, 120, 70, 1.4); this.time.delayedCall(500, () => confetti(this, 300, 200, 40)); this.time.delayedCall(800, () => confetti(this, 980, 200, 40)); Snd.play('win');
+    void w;
+    Btn(this, 400, 640, 300, 70, 'เล่นอีกรอบ', () => startMatch(this, n), 0x3ddc84, 34);
+    Btn(this, 740, 640, 220, 70, 'อันดับ', () => this.scene.start('Ranking'), 0xffd23f, 32);
+    Btn(this, 1010, 640, 240, 70, 'หน้าหลัก', () => this.scene.start('Menu'), 0xfff6e0, 32);
+  }
+}
+
+class Ranking extends Phaser.Scene {
+  constructor() { super('Ranking'); }
+  create() {
+    Ctl.off(); const d = Store.load(); bgGrad(this, '#3a1f7a', '#1d0f3b'); floaty(this);
+    T(this, W / 2, 70, 'อันดับถั่ว', 76, '#ffd23f');
+    const rows = [0, 1, 2, 3].map(i => Object.assign({ i, matches: 0, wins: 0, pts: 0 }, d.rank[i] || {})).filter(r => r.matches > 0).sort((a, b) => b.wins - a.wins || b.pts - a.pts);
+    if (!rows.length) T(this, W / 2, 300, 'ยังไม่มีใครแข่ง ไปเล่นกันก่อน!', 40);
+    else {
+      T(this, 700, 150, 'ชนะ', 28, '#fff6e0'); T(this, 820, 150, 'แมตช์', 28, '#fff6e0'); T(this, 950, 150, 'แต้มรวม', 28, '#fff6e0');
+      rows.forEach((r, k) => {
+        const y = 215 + k * 92, g = this.add.graphics(); g.fillStyle(SEATC[r.i], 1).fillRoundedRect(250, y - 38, 780, 76, 22); g.lineStyle(5, INK, 1).strokeRoundedRect(250, y - 38, 780, 76, 22);
+        T(this, 295, y, String(k + 1), 44, '#1d0f3b', { style: { strokeThickness: 0 } });
+        this.add.image(370, y, 'bean' + r.i).setScale(.55);
+        T(this, 430, y, NAMES[r.i], 38, '#1d0f3b', { ox: 0, style: { strokeThickness: 0 } });
+        T(this, 700, y, String(r.wins), 40, '#1d0f3b', { style: { strokeThickness: 0 } }); T(this, 820, y, String(r.matches), 40, '#1d0f3b', { style: { strokeThickness: 0 } }); T(this, 950, y, String(r.pts), 40, '#1d0f3b', { style: { strokeThickness: 0 } });
+      });
+    }
+    T(this, W / 2, 590, 'สถิติเล่นเดี่ยวสูงสุด: ' + (d.solo || 0), 30);
+    let arm = false;
+    const rb = Btn(this, 1040, 660, 360, 60, 'ล้างอันดับ', () => {
+      if (!arm) { arm = true; rb.setLabel('แน่ใจนะ? กดอีกที'); rb.tint(0xff5a6e); this.time.delayedCall(2500, () => { arm = false; if (rb.active) { rb.setLabel('ล้างอันดับ'); rb.tint(0xc9b6ff); } }); }
+      else { d.rank = {}; d.solo = 0; Store.save(); this.scene.restart(); }
+    }, 0xc9b6ff, 26);
+    Btn(this, 130, 660, 200, 60, '‹ กลับ', () => this.scene.start('Menu'), 0xfff6e0, 28);
+  }
+}
+
+class Settings extends Phaser.Scene {
+  constructor() { super('Settings'); }
+  create() {
+    Ctl.off(); const set = Store.load().set; bgGrad(this, '#3a1f7a', '#1d0f3b'); floaty(this);
+    T(this, W / 2, 80, 'ตั้งค่า', 76, '#ffd23f');
+    const tb = Btn(this, W / 2, 210, 640, 80, TUT_LABEL[set.tut], () => { set.tut = TUT_NEXT[set.tut]; Store.save(); tb.setLabel(TUT_LABEL[set.tut]); }, 0xc9b6ff, 34);
+    const sb = Btn(this, W / 2, 320, 640, 80, set.sfx ? 'เสียงเอฟเฟกต์: เปิด' : 'เสียงเอฟเฟกต์: ปิด', () => { set.sfx = !set.sfx; Store.save(); sb.setLabel(set.sfx ? 'เสียงเอฟเฟกต์: เปิด' : 'เสียงเอฟเฟกต์: ปิด'); Snd.play('tap'); }, 0x3fa7ff, 34);
+    const rb = Btn(this, W / 2, 430, 640, 80, 'จำนวนรอบต่อแมตช์: ' + set.rounds, () => { const o = [3, 5, 10]; set.rounds = o[(o.indexOf(set.rounds) + 1) % 3]; Store.save(); rb.setLabel('จำนวนรอบต่อแมตช์: ' + set.rounds); }, 0xffd23f, 34);
+    Btn(this, W / 2, 540, 640, 80, 'เต็มจอ', () => { try { (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {}); } catch (e) {} }, 0x3ddc84, 34);
+    Btn(this, 130, 660, 200, 60, '‹ กลับ', () => this.scene.start('Menu'), 0xfff6e0, 28);
+  }
+}
+
+class Test extends Phaser.Scene {
+  constructor() { super('Test'); }
+  create() {
+    this.input.addPointer(2); Ctl.setup(4, { joy: true, btn: 'ปุ๊ก' }); this.pads = new Pads(this, 4, { joy: true, btn: 'ปุ๊ก' });
+    bgGrad(this, '#2d8a6b', '#0f3d3a');
+    T(this, W / 2, 330, 'ทดสอบการควบคุม', 54, '#ffd23f'); T(this, W / 2, 392, 'ให้ทั้ง 4 คนลากจอยและกดปุ่มพร้อมกัน', 28);
+    this.touch = T(this, W / 2, 440, 'นิ้วที่แตะอยู่: 0', 30);
+    this.pos = []; this.cnt = [0, 0, 0, 0]; this.cntT = [];
+    for (let i = 0; i < 4; i++) { const L = SEATPOS[i]; this.pos[i] = { b: mkBean(this, i, L.jx + (i % 2 ? -120 : 120), L.jy + (i < 2 ? 120 : -120), .8) }; this.pos[i].x = this.pos[i].b.x; this.pos[i].y = this.pos[i].b.y; this.cntT[i] = T(this, L.bx, L.by + (i < 2 ? 80 : -80), '0', 34, '#fff6e0'); }
+    Btn(this, W / 2, 560, 260, 60, 'ออก', () => { Ctl.off(); this.scene.start('Menu'); }, 0xfff6e0, 30);
+  }
+  update(t, delta) {
+    const dt = Math.min(delta / 1000, .05);
+    for (let i = 0; i < 4; i++) {
+      const v = Ctl.get(i), p = this.pos[i]; p.x = clamp(p.x + v.x * 380 * dt, 40, 1240); p.y = clamp(p.y + v.y * 380 * dt, 150, 690); p.b.put(p.x, p.y);
+      if (v.pressed) { this.cnt[i]++; this.cntT[i].setText(String(this.cnt[i])); squash(this, p.b); Snd.play('boing'); pop(this, p.x, p.y - 70, 'ปุ๊ก!', '#fff6e0', 32); }
+    }
+    this.touch.setText('นิ้วที่แตะอยู่: ' + Ctl.map.size); Ctl.endFrame(); this.pads.update();
+  }
+}
+
+/* ---------------- boot ---------------- */
+function start() {
+  const game = new Phaser.Game({
+    type: Phaser.AUTO, parent: 'game', width: W, height: H, backgroundColor: '#1d0f3b',
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    input: { activePointers: 6 },
+    render: { antialias: true, roundPixels: false },
+    scene: [Boot, Menu, Lobby, Tutorial, Play, Pause, Results, MatchEnd, Ranking, Settings, Test]
+  });
+  game.events.once('ready', () => Ctl.init(game.canvas));
+  window.__game = game; window.__S = S; window.__GAMES = GAMES; window.__Ctl = Ctl;
+}
+let started = false;
+const go = () => { if (started) return; started = true; start(); };
+try { document.fonts.load('32px Itim', 'ถั่วป่วน').then(go, go); } catch (e) { go(); }
+setTimeout(go, 2500);
+})();
+</script>
