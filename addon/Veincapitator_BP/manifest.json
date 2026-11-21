@@ -1,0 +1,30 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Veincapitator",
+    "description": "ขุดแร่ทั้งเส้นและตัดไม้ทั้งต้นในครั้งเดียว พร้อมระบบตั้งค่าต่อผู้เล่น",
+    "uuid": "0e6b0719-e68b-4a49-9455-626b6de5d010",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "720db5b6-1640-47e0-bb17-9b39d8e1c548",
+      "version": [1, 0, 0]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "71fa9694-2d6e-481f-b873-0fb056f4bbd7",
+      "entry": "scripts/main.js",
+      "version": [1, 0, 0]
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "1.13.0"
+    }
+  ]
+}
