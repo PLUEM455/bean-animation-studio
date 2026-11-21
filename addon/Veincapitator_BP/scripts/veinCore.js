@@ -16,14 +16,6 @@ export function toolMatches(itemId, kind) {
   return Boolean(itemId) && Boolean(kind) && itemId.endsWith(`_${kind}`);
 }
 
-// How many extra blocks the tool can pay for.
-// Each extra block costs 1 durability; the item must stay below max damage.
-// remaining = maxDurability - damage (Infinity for non-durable items).
-export function extraBudget(limit, remaining) {
-  const durabilityCap = remaining === Infinity ? Infinity : remaining - 1;
-  return Math.max(0, Math.min(limit, durabilityCap));
-}
-
 const OFFSETS = [];
 for (let dx = -1; dx <= 1; dx++)
   for (let dy = -1; dy <= 1; dy++)

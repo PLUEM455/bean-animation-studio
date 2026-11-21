@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toolKindFor, toolMatches, extraBudget, collectVein } from "../Veincapitator_BP/scripts/veinCore.js";
+import { toolKindFor, toolMatches, collectVein } from "../Veincapitator_BP/scripts/veinCore.js";
 import { clampLimit, DEFAULTS } from "../Veincapitator_BP/scripts/settings.js";
 
 test("toolKindFor maps ores to pickaxe and logs to axe", () => {
@@ -17,14 +17,6 @@ test("toolMatches checks the held tool type", () => {
   assert.equal(toolMatches("minecraft:iron_pickaxe", "pickaxe"), true);
   assert.equal(toolMatches("minecraft:iron_axe", "pickaxe"), false);
   assert.equal(toolMatches(undefined, "axe"), false);
-});
-
-test("extraBudget respects limit and durability", () => {
-  assert.equal(extraBudget(64, Infinity), 64);
-  assert.equal(extraBudget(64, 10), 9); // keep the tool from breaking
-  assert.equal(extraBudget(5, 100), 5);
-  assert.equal(extraBudget(64, 1), 0);
-  assert.equal(extraBudget(64, 0), 0);
 });
 
 test("collectVein finds a connected cluster but not separate blocks", () => {

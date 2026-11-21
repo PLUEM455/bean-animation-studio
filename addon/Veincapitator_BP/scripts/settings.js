@@ -1,7 +1,7 @@
 // Per-player settings, stored as dynamic properties on the player.
 // Kept free of Minecraft imports so the parsing rules can be tested with plain Node.
 
-export const DEFAULTS = Object.freeze({ enabled: true, limit: 64, sneak: false });
+export const DEFAULTS = Object.freeze({ enabled: true, limit: 64 });
 export const LIMIT_MIN = 1;
 export const LIMIT_MAX = 256;
 
@@ -23,7 +23,6 @@ export function readSettings(player) {
   return {
     enabled: read("enabled", DEFAULTS.enabled),
     limit: clampLimit(read("limit", DEFAULTS.limit)),
-    sneak: read("sneak", DEFAULTS.sneak),
   };
 }
 

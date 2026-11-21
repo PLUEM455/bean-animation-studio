@@ -1,9 +1,9 @@
 import { world, system } from "@minecraft/server";
-import { toolKindFor, toolMatches, collectVein, extraBudget } from "./veinCore.js";
+import { toolKindFor, toolMatches, collectVein } from "./veinCore.js";
 import { readSettings, writeSetting, clampLimit, LIMIT_MIN, LIMIT_MAX } from "./settings.js";
 
 // Breaking a block: find the connected blocks of the same type and break them too.
-// Runs in system.run so we read the item and durability after the game has applied its own hit.
+// Needs sneaking. Costs only the one durability the game already charged for the first block.
 world.afterEvents.playerBreakBlock.subscribe((ev) => {
   const { player, block, brokenBlockPermutation, dimension } = ev;
   const brokenId = brokenBlockPermutation?.type?.id;
@@ -14,7 +14,7 @@ world.afterEvents.playerBreakBlock.subscribe((ev) => {
   system.run(() => {
     const settings = readSettings(player);
     if (!settings.enabled) return;
-    if (settings.sneak && !player.isSneaking) return;
+    if (!player.isSneaking) return;
 
     const kind = toolKindFor(brokenId);
     const inv = player.getComponent("minecraft:inventory")?.container;
@@ -23,11 +23,6 @@ world.afterEvents.playerBreakBlock.subscribe((ev) => {
     const item = inv.getItem(slot);
     if (!item || !toolMatches(item.typeId, kind)) return;
 
-    const dur = item.getComponent("minecraft:durability");
-    const remaining = dur ? dur.maxDurability - dur.damage : Infinity;
-    const budget = extraBudget(settings.limit, remaining);
-    if (budget <= 0) return;
-
     const matches = (p) => {
       try {
         return dimension.getBlock(p)?.typeId === brokenId;
@@ -35,21 +30,17 @@ world.afterEvents.playerBreakBlock.subscribe((ev) => {
         return false; // position outside loaded/valid world
       }
     };
-    const vein = collectVein(start, matches, budget);
+    const vein = collectVein(start, matches, settings.limit);
     if (vein.length === 0) return;
 
     // "destroy" makes setblock drop the items like a normal break.
     for (const p of vein) {
       dimension.runCommand(`setblock ${p.x} ${p.y} ${p.z} air destroy`);
     }
-    if (dur) {
-      dur.damage += vein.length;
-      inv.setItem(slot, item);
-    }
   });
 });
 
-// Chat commands: !vein on|off | limit <n> | sneak on|off | status
+// Chat commands: !vein on|off | limit <n> | status
 world.beforeEvents.chatSend.subscribe((ev) => {
   const text = ev.message.trim();
   if (!/^!vein(\s|$)/i.test(text)) return;
@@ -61,21 +52,13 @@ world.beforeEvents.chatSend.subscribe((ev) => {
 
 function handleCommand(player, [cmd, val]) {
   const say = (msg) => player.sendMessage(`§a[Veincapitator]§r ${msg}`);
-  const usage = `ใช้: !vein on|off | limit <${LIMIT_MIN}-${LIMIT_MAX}> | sneak on|off | status`;
-  const onOff = (v) => (v === "on" ? true : v === "off" ? false : undefined);
+  const usage = `ใช้: !vein on|off | limit <${LIMIT_MIN}-${LIMIT_MAX}> | status`;
 
   switch (cmd) {
     case "on":
     case "off":
       writeSetting(player, "enabled", cmd === "on");
       return say(`เปิดใช้งาน: ${cmd === "on" ? "ใช่" : "ไม่"}`);
-
-    case "sneak": {
-      const v = onOff(val);
-      if (v === undefined) return say(usage);
-      writeSetting(player, "sneak", v);
-      return say(`ต้องย่อตัว (sneak) ก่อนทำงาน: ${v ? "ใช่" : "ไม่"}`);
-    }
 
     case "limit": {
       if (!/^\d+$/.test(val ?? "")) return say(usage);
@@ -86,7 +69,7 @@ function handleCommand(player, [cmd, val]) {
 
     case "status": {
       const s = readSettings(player);
-      return say(`เปิด: ${s.enabled ? "ใช่" : "ไม่"} | จำนวนสูงสุด: ${s.limit} | ต้องย่อตัว: ${s.sneak ? "ใช่" : "ไม่"}`);
+      return say(`เปิด: ${s.enabled ? "ใช่" : "ไม่"} | จำนวนสูงสุด: ${s.limit}`);
     }
 
     default:
